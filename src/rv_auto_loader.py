@@ -27,13 +27,14 @@ SETTINGS_NAME = "SLINGSHOT_AUTO_LOADER"
 class PendingMediaRep:
     sourceNode: str
     mediaRepName: str
-    mediaRepPathsAndOptions: list[str]
+    mediaRepPath: Path
     tag: str | None = None
 
 
 class SlingshotAutoLoaderMode(rvtypes.MinorMode):
     _enabled: bool = True
     _autoload_queue: Queue[PendingMediaRep] = Queue()
+    _delete_node: str | None = None
 
     def __init__(self):
         super().__init__()
@@ -46,18 +47,12 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
             (
                 "source-group-complete",
                 self.auto_load_plates,
-                "Auto load plates and v000s",
-            ),
-            ("source-media-set", self.on_source_media_set, "On source media set"),
-            (
-                "incoming-source-path",
-                self.on_incoming_source_path,
-                "On incoming source path",
+                "Auto detect plates and v000s",
             ),
             (
                 "after-progressive-loading",
                 self.after_progressive_loading,
-                "Auto load additional media representations",
+                "Load additional v000/plate media representations",
             ),
         ]
 
@@ -67,7 +62,7 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
             None,
             menu=self.give_menu(),
             # sortKey="multiple_source_media_rep",
-            ordering=30,  # run our actions after native MultipleSourceMediaRepMode package
+            ordering=30,  # run our actions last, after Flow Production Tracking package
         )
 
     def give_menu(self):
@@ -136,20 +131,29 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
             return
 
         file_source = extra_commands.nodesInGroupOfType(group, "RVFileSource")[0]
-        source_groups = extra_commands.nodesInGroupOfType(group, "RVSourceGroup")
-        switch_nodes = extra_commands.nodesInGroupOfType(group, "RVSwitch")
-        print("switch_node", switch_nodes)
 
         source_path = Path(
             commands.getStringProperty(f"{file_source}.media.movie", 0, 1000)[0]
         )
 
-        try:
-            print("INFO!!", commands.sourceMediaInfo(file_source, str(source_path)))
-        except Exception:
-            pass
-
         media_reps = commands.sourceMediaReps(file_source)
+
+        if "Movie" not in media_reps:
+            logger.debug("Adding Movie media representation")
+            rep_node = commands.addSourceMediaRep(
+                file_source, "Movie", [str(source_path)]
+            )
+            commands.setActiveSourceMediaRep(file_source, "Movie")
+            self._delete_node = group
+            switch_node = commands.sourceMediaRepSwitchNode(rep_node)
+            print(f"{rep_node} switch_node: {switch_node}")
+            if switch_node != "":
+                logger.debug(f"setUIName: {switch_node} {source_path.name}")
+                extra_commands.setUIName(
+                    commands.nodeGroup(switch_node), source_path.name
+                )
+
+            return
 
         _media_rep_name_lookup = {
             "plate_mov_path": "Plate",
@@ -183,39 +187,40 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
             # ERROR: after progressive loading, number of new sources (%s) != infos (%s)"
             # an error is thrown and the Flow sources don't get updated with infro from the Flow fields
             # so we queue up our changes here and then run them all after progressive loading is done.
-
             logger.debug(f"Queueing autoload {media_rep_name} {new_source_file}")
             self._autoload_queue.put(
                 PendingMediaRep(
-                    file_source, media_rep_name, [str(new_source_file)], "autoload"
+                    file_source, media_rep_name, new_source_file, "autoload"
                 )
             )
-
-    def on_source_media_set(self, event: "Event"):
-        logger.debug(f"on_source_media_set: {event.contents()}")
-
-    def on_incoming_source_path(self, event: "Event"):
-        logger.debug(f"on_incoming_source_path: {event.contents()}")
-        #  The contents of the "source-group-complete" looks like "group nodename;;action_type"
-        infilename, tag = event.contents().split(";;")
 
     def after_progressive_loading(self, event: "Event"):
         logger.debug(f"after_progressive_loading: {event.contents()}")
 
         while not self._autoload_queue.empty():
             rep = self._autoload_queue.get_nowait()
-            logger.info(f"Autoloading {rep.mediaRepName} {rep.mediaRepPathsAndOptions}")
+            logger.info(f"Autoloading {rep.mediaRepName} {rep.mediaRepPath}")
             try:
-                commands.addSourceMediaRep(
+                new_rep = commands.addSourceMediaRep(
                     rep.sourceNode,
                     rep.mediaRepName,
-                    rep.mediaRepPathsAndOptions,
+                    [str(rep.mediaRepPath)],
                     rep.tag,
                 )
             except Exception:
                 # source media representation name already exists, probably
                 # Exception: Exception thrown while calling commands.addSourceMediaRep, ERROR: Source media representation name already exists:
                 continue
+
+            extra_commands.setUIName(
+                commands.nodeGroup(new_rep),
+                f"{rep.mediaRepPath.name} ({rep.mediaRepName})",
+            )
+
+        if self._delete_node:
+            logger.debug(f"Deleting {self._delete_node}")
+            commands.deleteNode(self._delete_node)
+            self._delete_node = None
 
         event.reject()
 
