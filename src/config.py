@@ -1,0 +1,60 @@
+from configparser import ConfigParser
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass(frozen=True)
+class AutoloadPlatesConfig:
+    plate_mov_path: str | None = None
+    plate_frames_path: str | None = None
+    v000_mov_path: str | None = None
+    v000_frames_path: str | None = None
+
+
+@dataclass(frozen=True)
+class Settings:
+    plates: AutoloadPlatesConfig = AutoloadPlatesConfig()
+    # color: ColorConfig
+
+
+def read_settings() -> Settings:
+    _config = get_or_create_default_config()
+    return Settings(
+        plates=AutoloadPlatesConfig(
+            plate_mov_path=_config["plates"].get("plate_mov_path"),
+            plate_frames_path=_config["plates"].get("plate_frames_path"),
+            v000_mov_path=_config["plates"].get("v000_mov_path"),
+            v000_frames_path=_config["plates"].get("v000_frames_path"),
+        )
+        if _config.has_section("plates")
+        else AutoloadPlatesConfig(),
+        # color=ColorConfig(
+        #     red=ini_file["color"]["red"],
+        #     green=ini_file["color"]["green"],
+        #     blue=ini_file["color"]["blue"],
+        # ),
+    )
+
+
+def get_config_path() -> Path:
+    """Gets the path to the config file in the user's home directory."""
+
+    return Path.home() / ".slingshot_rv_autoloader.cfg"
+
+
+def get_or_create_default_config() -> ConfigParser:
+    """Reads the config file, and creates a default if it doesn't exist."""
+
+    config_file = get_config_path()
+    config = ConfigParser(allow_no_value=True)
+    if not config_file.exists():
+        for k, v in Settings().__dict__.items():
+            config[k] = v.__dict__
+
+        with open(config_file, "w") as f:
+            config.write(f)
+
+        return config
+
+    config.read(config_file)
+    return config
