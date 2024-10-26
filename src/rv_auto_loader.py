@@ -90,6 +90,14 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
                                 stateHook=lambda: commands.DisabledMenuState,
                             ).tuple(),
                             MenuItem(
+                                label=f"Plates first frame is: {self.config.plates.plate_first_frame_in_file}",
+                                stateHook=lambda: commands.DisabledMenuState,
+                            ).tuple(),
+                            MenuItem(
+                                label=f"Plates cut in on: {self.config.plates.plate_cut_in_frame}",
+                                stateHook=lambda: commands.DisabledMenuState,
+                            ).tuple(),
+                            MenuItem(
                                 label=f"To configure these, edit {get_config_path().name}",
                                 stateHook=lambda: commands.DisabledMenuState,
                             ).tuple(),
@@ -146,13 +154,15 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
             commands.setActiveSourceMediaRep(file_source, "Movie")
             self._delete_node = group
             switch_node = commands.sourceMediaRepSwitchNode(rep_node)
-            print(f"{rep_node} switch_node: {switch_node}")
             if switch_node != "":
-                logger.debug(f"setUIName: {switch_node} {source_path.name}")
+                logger.debug(
+                    f"configuring switch node: {switch_node} {source_path.name}"
+                )
                 extra_commands.setUIName(
                     commands.nodeGroup(switch_node), source_path.name
                 )
-
+                # if self.config.plates.plate_offset:
+                #     commands.setIntProperty(f"{switch_node}.mode.alignStartFrames", [1])
             return
 
         _media_rep_name_lookup = {
@@ -162,8 +172,7 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
             "v000_frames_path": "v000 Frames",
         }
 
-        for _plate in self.config.plates.__dataclass_fields__:
-            media_rep_name = _media_rep_name_lookup[_plate]
+        for _plate, media_rep_name in _media_rep_name_lookup.items():
             if media_rep_name in media_reps:
                 continue
 
@@ -216,6 +225,26 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
                 commands.nodeGroup(new_rep),
                 f"{rep.mediaRepPath.name} ({rep.mediaRepName})",
             )
+
+            if rep.mediaRepName.startswith("Plate"):
+                logger.debug(
+                    f"Setting {new_rep} plate cut.in: {self.config.plates.plate_cut_in_frame} rangeStart: {self.config.plates.plate_first_frame_in_file}"
+                )
+                if self.config.plates.plate_cut_in_frame:
+                    commands.setIntProperty(
+                        f"{new_rep}.cut.in", [self.config.plates.plate_cut_in_frame]
+                    )
+
+                if self.config.plates.plate_first_frame_in_file:
+                    if not commands.propertyExists(f"{new_rep}.group.rangeStart"):
+                        commands.newProperty(
+                            f"{new_rep}.group.rangeStart", commands.IntType, 1
+                        )
+                    commands.setIntProperty(
+                        f"{new_rep}.group.rangeStart",
+                        [self.config.plates.plate_first_frame_in_file],
+                        True,
+                    )
 
         if self._delete_node:
             logger.debug(f"Deleting {self._delete_node}")

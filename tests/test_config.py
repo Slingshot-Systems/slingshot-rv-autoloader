@@ -22,6 +22,8 @@ from src.config import (
                     "plate_frames_path": "/path/to/plate_frames",
                     "v000_mov_path": "/path/to/v000_mov",
                     "v000_frames_path": "/path/to/v000_frames",
+                    "plate_first_frame_in_file": 5,
+                    "plate_cut_in_frame": 1000,
                 }
             },
             Settings(
@@ -30,6 +32,8 @@ from src.config import (
                     plate_frames_path="/path/to/plate_frames",
                     v000_mov_path="/path/to/v000_mov",
                     v000_frames_path="/path/to/v000_frames",
+                    plate_first_frame_in_file=5,
+                    plate_cut_in_frame=1000,
                 )
             ),
             id="happy_path_all_keys_present",
@@ -51,6 +55,7 @@ from src.config import (
                     plate_frames_path=None,
                     v000_mov_path=None,
                     v000_frames_path=None,
+                    plate_first_frame_in_file=None,
                 )
             ),
             id="edge_case_missing_some_keys",
@@ -59,11 +64,10 @@ from src.config import (
 )
 def test_read_settings(config_data, expected_settings):
     # Arrange
-    mock_config = MagicMock()
-    mock_config.has_section.side_effect = lambda section: section in config_data
-    mock_config.__getitem__.side_effect = lambda section: config_data.get(section, {})
+    _config = ConfigParser(allow_no_value=True)
+    _config.read_dict(config_data)
 
-    with patch("src.config.get_or_create_default_config", return_value=mock_config):
+    with patch("src.config.get_or_create_default_config", return_value=_config):
         # Act
         if isinstance(expected_settings, type) and issubclass(
             expected_settings, Exception

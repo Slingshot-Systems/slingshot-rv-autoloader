@@ -1,0 +1,7 @@
+[plates]
+plate_mov_path = ../plate/*plt*.mov
+plate_frames_path = ../plate/*/*x*/*.exr
+v000_mov_path = ./*plt*v000*.mov
+v000_frames_path = ../exrs/*v000/*x*/
+plate_first_frame_in_file = 985
+plate_cut_in_frame = 1000

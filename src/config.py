@@ -7,6 +7,8 @@ from pathlib import Path
 class AutoloadPlatesConfig:
     plate_mov_path: str | None = None
     plate_frames_path: str | None = None
+    plate_cut_in_frame: int | None = None
+    plate_first_frame_in_file: int | None = None
     v000_mov_path: str | None = None
     v000_frames_path: str | None = None
 
@@ -25,6 +27,10 @@ def read_settings() -> Settings:
             plate_frames_path=_config["plates"].get("plate_frames_path"),
             v000_mov_path=_config["plates"].get("v000_mov_path"),
             v000_frames_path=_config["plates"].get("v000_frames_path"),
+            plate_first_frame_in_file=_config["plates"].getint(
+                "plate_first_frame_in_file"
+            ),
+            plate_cut_in_frame=_config["plates"].getint("plate_cut_in_frame"),
         )
         if _config.has_section("plates")
         else AutoloadPlatesConfig(),
