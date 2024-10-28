@@ -50,7 +50,7 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
         init_bindings = [
             (
                 "source-group-complete",
-                self.auto_load_plates,
+                self.on_source_group_complete,
                 "Auto detect plates and v000s",
             ),
             (
@@ -143,44 +143,33 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
         logger.setLevel(logging.DEBUG if self._debug else logging.INFO)
         commands.writeSettings(SETTINGS_NAME, "debug", self._debug)
 
-    def auto_load_plates(self, event: "Event"):
+    def on_source_group_complete(self, event: "Event"):
         logger.debug(f"auto_load_plates: {event.contents()}")
         #  The contents of the "source-group-complete" looks like "group nodename;;action_type"
         group, action_type = event.contents().split(";;")
 
         event.reject()
 
+        self._autoload_plates(group)
+        self._autoload_color(group)
+
+    def _autoload_plates(self, source_group: str):
         if not self._enabled:
             logger.debug("Auto loader disabled")
             return
 
-        file_source = extra_commands.nodesInGroupOfType(group, "RVFileSource")[0]
-
+        file_source = extra_commands.nodesInGroupOfType(source_group, "RVFileSource")[0]
         source_path = Path(
             commands.getStringProperty(f"{file_source}.media.movie", 0, 1000)[0]
         )
+        if media_reps := commands.sourceMediaReps(file_source):
+            self._enqueue_plate_autoloads(file_source, source_path, media_reps)
+        else:
+            return self._add_default_media_rep(source_group, file_source, source_path)
 
-        media_reps = commands.sourceMediaReps(file_source)
-
-        if "Movie" not in media_reps:
-            logger.debug("Adding Movie media representation")
-            rep_node = commands.addSourceMediaRep(
-                file_source, "Movie", [str(source_path)]
-            )
-            commands.setActiveSourceMediaRep(file_source, "Movie")
-            self._delete_node = group
-            switch_node = commands.sourceMediaRepSwitchNode(rep_node)
-            if switch_node != "":
-                logger.debug(
-                    f"configuring switch node: {switch_node} {source_path.name}"
-                )
-                extra_commands.setUIName(
-                    commands.nodeGroup(switch_node), source_path.name
-                )
-                # if self.config.plates.plate_offset:
-                #     commands.setIntProperty(f"{switch_node}.mode.alignStartFrames", [1])
-            return
-
+    def _enqueue_plate_autoloads(
+        self, file_source: str, source_path: Path, media_reps: list[str]
+    ):
         _media_rep_name_lookup = {
             "plate_mov_path": "Plate",
             "plate_frames_path": "Plate Frames",
@@ -209,15 +198,34 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
 
             # adding new media representations here interferes with the Flow Production Tracking Mode
             # specifically in shotgrid_mode.mu method: afterProgressiveLoading (void; Event event)
-            # ERROR: after progressive loading, number of new sources (%s) != infos (%s)"
-            # an error is thrown and the Flow sources don't get updated with infro from the Flow fields
-            # so we queue up our changes here and then run them all after progressive loading is done.
+            #      > ERROR: after progressive loading, number of new sources (%s) != infos (%s)"
+            # an error is thrown and the Flow sources don't get updated with info from the Flow fields
+            # so we queue up our changes and then run them all after progressive loading is done.
             logger.debug(f"Queueing autoload {media_rep_name} {new_source_file}")
             self._autoload_queue.put(
                 PendingMediaRep(
                     file_source, media_rep_name, new_source_file, "autoload"
                 )
             )
+
+    def _add_default_media_rep(
+        self, source_group: str, file_source: str, source_path: Path
+    ):
+        logger.debug("Adding 'Movie' media representation")
+        rep_node = commands.addSourceMediaRep(file_source, "Movie", [str(source_path)])
+        commands.setActiveSourceMediaRep(file_source, "Movie")
+
+        # flag for deletion in after_progressive_loading
+        self._delete_node = source_group
+
+        # rename switch node in UI with filename
+        switch_node = commands.sourceMediaRepSwitchNode(rep_node)
+        if switch_node != "":
+            logger.debug(f"configuring switch node: {switch_node} {source_path.name}")
+            extra_commands.setUIName(commands.nodeGroup(switch_node), source_path.name)
+            # if self.config.plates.plate_offset:
+            #     commands.setIntProperty(f"{switch_node}.mode.alignStartFrames", [1])
+        return
 
     def after_progressive_loading(self, event: "Event"):
         logger.debug(f"after_progressive_loading: {event.contents()}")
