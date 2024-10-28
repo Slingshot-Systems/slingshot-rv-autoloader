@@ -14,11 +14,11 @@ from rv_schemas.menu import MenuItem
 
 logging.basicConfig()
 logger = logging.getLogger("SlingshotAutoLoader")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 # todo:
 # - bind to the 'incoming-source-path' event and add additional media representations for plates anv v000s (also .mov and frames?)
 # - bind to the 'incoming-source-path' event and load luts and CDLs
-# add debug setting to menu and set the log level based on it
+
 
 SETTINGS_NAME = "SLINGSHOT_AUTO_LOADER"
 
@@ -33,6 +33,7 @@ class PendingMediaRep:
 
 class SlingshotAutoLoaderMode(rvtypes.MinorMode):
     _enabled: bool = True
+    _debug: bool = False
     _autoload_queue: Queue[PendingMediaRep] = Queue()
     _delete_node: str | None = None
 
@@ -42,6 +43,9 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
         self.config = read_settings()
 
         self._enabled = commands.readSettings(SETTINGS_NAME, "enabled", self._enabled)
+        self._debug = commands.readSettings(SETTINGS_NAME, "debug", self._debug)
+
+        logger.setLevel(logging.DEBUG if self._debug else logging.INFO)
 
         init_bindings = [
             (
@@ -109,6 +113,13 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
                         actionHook=self.toggle_enabled,
                         stateHook=self.is_enabled,
                     ).tuple(),
+                    MenuItem(
+                        label="Debug Logging",
+                        actionHook=self.toggle_debug,
+                        stateHook=lambda: commands.CheckedMenuState
+                        if self._debug
+                        else commands.UncheckedMenuState,
+                    ).tuple(),
                 ],
             )
         ]
@@ -126,6 +137,11 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
         self._enabled = not self._enabled
         print(f"toggle_enabled -> {self._enabled}")
         commands.writeSettings(SETTINGS_NAME, "enabled", self._enabled)
+
+    def toggle_debug(self, event: "Event"):
+        self._debug = not self._debug
+        logger.setLevel(logging.DEBUG if self._debug else logging.INFO)
+        commands.writeSettings(SETTINGS_NAME, "debug", self._debug)
 
     def auto_load_plates(self, event: "Event"):
         logger.debug(f"auto_load_plates: {event.contents()}")
