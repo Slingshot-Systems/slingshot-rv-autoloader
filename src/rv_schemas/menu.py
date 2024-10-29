@@ -1,5 +1,5 @@
-from dataclasses import astuple, dataclass
-from typing import Any, Callable
+from dataclasses import dataclass, fields
+from typing import Callable
 
 from .event import Event
 
@@ -12,4 +12,5 @@ class MenuItem:
     stateHook: Callable[[], int] | None = None
 
     def tuple(self) -> tuple[str, Callable[[Event], None], str, Callable[[], int]]:
-        return astuple(self)
+        # dataclasses.astuple() returns a deep copy which breaks the callback hooks, so we roll our own
+        return tuple(self.__dict__[field.name] for field in fields(self))
