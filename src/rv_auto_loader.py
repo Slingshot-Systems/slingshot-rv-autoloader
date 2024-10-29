@@ -16,8 +16,7 @@ logging.basicConfig()
 logger = logging.getLogger("SlingshotAutoLoader")
 logger.setLevel(logging.INFO)
 # todo:
-# - bind to the 'incoming-source-path' event and add additional media representations for plates anv v000s (also .mov and frames?)
-# - bind to the 'incoming-source-path' event and load luts and CDLs
+# - set PATH_SWAP environment variables during init, if configured?
 
 
 SETTINGS_NAME = "SLINGSHOT_AUTO_LOADER"
@@ -75,32 +74,54 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
                 "Slingshot Auto Loader",
                 [
                     (
-                        "Auto Load",
+                        "Current Configuration",
                         [
                             MenuItem(
-                                label=f"Plate MOVs: {self.config.plates.plate_mov_path}",
+                                "LUT/CDLs",
                                 stateHook=lambda: commands.DisabledMenuState,
                             ).tuple(),
                             MenuItem(
-                                label=f"Plate Frames: {self.config.plates.plate_frames_path}",
+                                label=f"    File LUT: {self.config.color.file_lut}",
                                 stateHook=lambda: commands.DisabledMenuState,
                             ).tuple(),
                             MenuItem(
-                                label=f"v000 MOVs: {self.config.plates.v000_mov_path}",
+                                label=f"    Look CDL: {self.config.color.look_cdl}",
                                 stateHook=lambda: commands.DisabledMenuState,
                             ).tuple(),
                             MenuItem(
-                                label=f"v000 Frames: {self.config.plates.v000_frames_path}",
+                                label=f"    Look LUT: {self.config.color.look_lut}",
+                                stateHook=lambda: commands.DisabledMenuState,
+                            ).tuple(),
+                            MenuItem("_").tuple(),
+                            MenuItem(
+                                "Plates/v000s",
                                 stateHook=lambda: commands.DisabledMenuState,
                             ).tuple(),
                             MenuItem(
-                                label=f"Plates first frame is: {self.config.plates.plate_first_frame_in_file}",
+                                label=f"    Plate MOVs: {self.config.plates.plate_mov_path}",
                                 stateHook=lambda: commands.DisabledMenuState,
                             ).tuple(),
                             MenuItem(
-                                label=f"Plates cut in on: {self.config.plates.plate_cut_in_frame}",
+                                label=f"    Plate Frames: {self.config.plates.plate_frames_path}",
                                 stateHook=lambda: commands.DisabledMenuState,
                             ).tuple(),
+                            MenuItem(
+                                label=f"    v000 MOVs: {self.config.plates.v000_mov_path}",
+                                stateHook=lambda: commands.DisabledMenuState,
+                            ).tuple(),
+                            MenuItem(
+                                label=f"    v000 Frames: {self.config.plates.v000_frames_path}",
+                                stateHook=lambda: commands.DisabledMenuState,
+                            ).tuple(),
+                            MenuItem(
+                                label=f"    Plates first frame is: {self.config.plates.plate_first_frame_in_file}",
+                                stateHook=lambda: commands.DisabledMenuState,
+                            ).tuple(),
+                            MenuItem(
+                                label=f"    Plates cut in on: {self.config.plates.plate_cut_in_frame}",
+                                stateHook=lambda: commands.DisabledMenuState,
+                            ).tuple(),
+                            MenuItem("_").tuple(),
                             MenuItem(
                                 label=f"To configure these, edit {get_config_path().name}",
                                 stateHook=lambda: commands.DisabledMenuState,
@@ -236,6 +257,151 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
             # if self.config.plates.plate_offset:
             #     commands.setIntProperty(f"{switch_node}.mode.alignStartFrames", [1])
         return
+
+    def _autoload_color(self, source_group: str):
+        # todo:
+        # - separate enable toggles for plate and cdl loaders
+        # - get lut paths from config
+        # - file lut: decide between LUT (RVLookLUT), LinearToAlexaLogC (or any other node type), or none, from config
+        # - look lut: decide between LUT (RVLookLUT), or none, from config
+        # - move "file" lut/Linear node to RVLinearize in the RVLinearizePipelineGroup instead of in the LookPipeline
+        # - build out LUT/CDL menu with configured values
+
+        if not self._enabled:
+            logger.debug("Auto loader disabled")
+            return
+
+        file_source = extra_commands.nodesInGroupOfType(source_group, "RVFileSource")[0]
+        source_path = Path(
+            commands.getStringProperty(f"{file_source}.media.movie", 0, 1000)[0]
+        )
+
+        if source_path.suffix.lower() not in (".dpx", ".exr"):
+            return
+
+        self._add_file_lut(source_group, source_path)
+        self._add_look_luts(source_group, source_path)
+
+    def _add_file_lut(self, source_group: str, source_path: Path):
+        if not self.config.color.file_lut:
+            return
+
+        # decide if it's a path or a node name
+        if any(v in self.config.color.file_lut for v in (".", "*", "\\", "/")):
+            # it's a LUT path
+            if not (
+                lut_path := self._find_file(source_path, self.config.color.file_lut)
+            ):
+                logger.warning("Can't load file LUT")
+                return
+
+            logger.info(f"Loading File LUT {lut_path}")
+            commands.readLUT(str(lut_path), "#RVLinearize", True)
+
+        else:
+            # it's a node name
+            file_pipe = extra_commands.nodesInGroupOfType(
+                source_group, "RVLinearizePipelineGroup"
+            )[0]
+            # add node to file pipeline
+            logger.info(
+                f"Adding {self.config.color.file_lut} Node to Linearize Pipeline"
+            )
+            commands.setStringProperty(
+                f"{file_pipe}.pipeline.nodes",
+                ["RVLinearize", self.config.color.file_lut],
+                True,
+            )
+
+    def _add_look_luts(self, source_group: str, source_path: Path):
+        look_pipe = extra_commands.nodesInGroupOfType(
+            source_group, "RVLookPipelineGroup"
+        )[0]
+
+        look_pipeline = []
+
+        if self.config.color.look_cdl:
+            look_pipeline.append("RVColor")
+
+        if self.config.color.look_lut:
+            look_pipeline += ["RVLookLUT", "Rec709ToLinear"]
+
+        commands.setStringProperty(f"{look_pipe}.pipeline.nodes", look_pipeline, True)
+
+        self._add_look_cdl(source_path, look_pipe)
+        self._add_look_lut(source_path, look_pipe)
+
+        # print a debug summary
+        _look_pipe_nodes = commands.nodesInGroup(look_pipe)
+        _look_pipe_node_summary = [
+            f"{commands.nodeType(node)}: {node}" for node in _look_pipe_nodes
+        ]
+        logger.debug(f"{look_pipe}: {','.join(_look_pipe_node_summary)}")
+
+    def _add_look_cdl(self, source_path: Path, look_pipe: str):
+        if not self.config.color.look_cdl:
+            return
+
+        if not (cdl_path := self._find_file(source_path, self.config.color.look_cdl)):
+            logger.warning("Can't load look CDL")
+            return
+
+        color_node = extra_commands.nodesInGroupOfType(look_pipe, "RVColor")[0]
+        logger.info(f"Loading look CDL {cdl_path}")
+        commands.readCDL(str(cdl_path), color_node, True)
+
+    def _add_look_lut(self, source_path: Path, look_pipe: str):
+        if not self.config.color.look_lut:
+            return
+
+        if not (lut_path := self._find_file(source_path, self.config.color.look_lut)):
+            logger.warning("Can't load look LUT")
+            return
+
+        look_node = extra_commands.nodesInGroupOfType(look_pipe, "RVLookLUT")[0]
+        logger.info(f"Loading look LUT: {lut_path}")
+        commands.readLUT(str(lut_path), look_node, True)
+
+        # elif (nodeType == "RVLookPipelineGroup"):
+        #     # If our config has a Look named shot_specific_look and uses the
+        #     # environment/context variable "$SHOT" to locate any required
+        #     # files on disk, then this is what that would likely look like
+        #     result = [
+        #         {"nodeType"   : "OCIOLook",
+        #         "context"    : {},
+        #         "properties" : {
+        #             "ocio.function"     : "look",
+        #             "ocio.inColorSpace" : OCIO.Constants.ROLE_SCENE_LINEAR,
+        #             "ocio_look.look"    : "role_color_my_look"}}]
+
+        # linPipeNode = extra_commands.nodesInGroupOfType(
+        #     source_group, "RVLinearizePipelineGroup"
+        # )[0]
+        # linNode = extra_commands.nodesInGroupOfType(linPipeNode, "RVLinearize")[0]
+        # ICCNode = extra_commands.nodesInGroupOfType(
+        #     linPipeNode, "ICCLinearizeTransform"
+        # )[0]
+        # lensNode = extra_commands.nodesInGroupOfType(linPipeNode, "RVLensWarp")[0]
+        # fmtNode = extra_commands.nodesInGroupOfType(source_group, "RVFormat")[0]
+        # tformNode = extra_commands.nodesInGroupOfType(source_group, "RVTransform2D")[0]
+        # lookPipeNode = extra_commands.nodesInGroupOfType(
+        #     source_group, "RVLookPipelineGroup"
+        # )[0]
+        # lookNode = extra_commands.nodesInGroupOfType(lookPipeNode, "RVLookLUT")[0]
+        # typeName = commands.nodeType(file_source)
+
+        # mInfo = commands.sourceMediaInfo(file_source, None)
+        # try:
+        #     srcAttrs = commands.sourceAttributes(file_source, source_path.name)
+        #     srcData = commands.sourceDataAttributes(file_source, source_path.name)
+        # except Exception:
+        #     return
+
+        # if srcAttrs is None:
+        #     print(
+        #         f"ERROR: SourceSetup: source {file_source}/{source_path.name} has no attributes"
+        #     )
+        #     return
 
     def after_progressive_loading(self, event: "Event"):
         logger.debug(f"after_progressive_loading: {event.contents()}")

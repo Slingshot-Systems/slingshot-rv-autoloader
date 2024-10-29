@@ -14,14 +14,22 @@ class AutoloadPlatesConfig:
 
 
 @dataclass(frozen=True)
-class Settings:
+class AutoloadColorConfig:
+    file_lut: str | None = None
+    look_cdl: str | None = None
+    look_lut: str | None = None
+
+
+@dataclass(frozen=True)
+class AutoloaderConfig:
     plates: AutoloadPlatesConfig = AutoloadPlatesConfig()
-    # color: ColorConfig
+    color: AutoloadColorConfig = AutoloadColorConfig()
 
 
-def read_settings() -> Settings:
+def read_settings() -> AutoloaderConfig:
     _config = get_or_create_default_config()
-    return Settings(
+
+    return AutoloaderConfig(
         plates=AutoloadPlatesConfig(
             plate_mov_path=_config["plates"].get("plate_mov_path"),
             plate_frames_path=_config["plates"].get("plate_frames_path"),
@@ -34,11 +42,13 @@ def read_settings() -> Settings:
         )
         if _config.has_section("plates")
         else AutoloadPlatesConfig(),
-        # color=ColorConfig(
-        #     red=ini_file["color"]["red"],
-        #     green=ini_file["color"]["green"],
-        #     blue=ini_file["color"]["blue"],
-        # ),
+        color=AutoloadColorConfig(
+            file_lut=_config["color"].get("file_lut"),
+            look_cdl=_config["color"].get("look_cdl"),
+            look_lut=_config["color"].get("look_lut"),
+        )
+        if _config.has_section("color")
+        else AutoloadColorConfig(),
     )
 
 
@@ -54,7 +64,7 @@ def get_or_create_default_config() -> ConfigParser:
     config_file = get_config_path()
     config = ConfigParser(allow_no_value=True)
     if not config_file.exists():
-        for k, v in Settings().__dict__.items():
+        for k, v in AutoloaderConfig().__dict__.items():
             config[k] = v.__dict__
 
         with open(config_file, "w") as f:

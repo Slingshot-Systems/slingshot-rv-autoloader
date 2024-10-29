@@ -5,8 +5,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.config import (
+    AutoloadColorConfig,
+    AutoloaderConfig,
     AutoloadPlatesConfig,
-    Settings,
     get_or_create_default_config,
     read_settings,
 )
@@ -24,9 +25,42 @@ from src.config import (
                     "v000_frames_path": "/path/to/v000_frames",
                     "plate_first_frame_in_file": 5,
                     "plate_cut_in_frame": 1000,
+                },
+                "color": {
+                    "file_lut": "/path/to/file_lut",
+                    "look_cdl": "/path/to/look_cdl",
+                    "look_lut": "/path/to/look_lut",
+                },
+            },
+            AutoloaderConfig(
+                plates=AutoloadPlatesConfig(
+                    plate_mov_path="/path/to/plate_mov",
+                    plate_frames_path="/path/to/plate_frames",
+                    v000_mov_path="/path/to/v000_mov",
+                    v000_frames_path="/path/to/v000_frames",
+                    plate_first_frame_in_file=5,
+                    plate_cut_in_frame=1000,
+                ),
+                color=AutoloadColorConfig(
+                    file_lut="/path/to/file_lut",
+                    look_cdl="/path/to/look_cdl",
+                    look_lut="/path/to/look_lut",
+                ),
+            ),
+            id="happy_path_all_keys_present",
+        ),
+        pytest.param(
+            {
+                "plates": {
+                    "plate_mov_path": "/path/to/plate_mov",
+                    "plate_frames_path": "/path/to/plate_frames",
+                    "v000_mov_path": "/path/to/v000_mov",
+                    "v000_frames_path": "/path/to/v000_frames",
+                    "plate_first_frame_in_file": 5,
+                    "plate_cut_in_frame": 1000,
                 }
             },
-            Settings(
+            AutoloaderConfig(
                 plates=AutoloadPlatesConfig(
                     plate_mov_path="/path/to/plate_mov",
                     plate_frames_path="/path/to/plate_frames",
@@ -36,27 +70,50 @@ from src.config import (
                     plate_cut_in_frame=1000,
                 )
             ),
-            id="happy_path_all_keys_present",
+            id="plates_only",
+        ),
+        pytest.param(
+            {
+                "color": {
+                    "file_lut": "/path/to/file_lut",
+                    "look_cdl": "/path/to/look_cdl",
+                    "look_lut": "/path/to/look_lut",
+                },
+            },
+            AutoloaderConfig(
+                color=AutoloadColorConfig(
+                    file_lut="/path/to/file_lut",
+                    look_cdl="/path/to/look_cdl",
+                    look_lut="/path/to/look_lut",
+                )
+            ),
+            id="color_only",
         ),
         pytest.param(
             {},
-            Settings(plates=AutoloadPlatesConfig()),
-            id="edge_case_missing_plates_section",
+            AutoloaderConfig(plates=AutoloadPlatesConfig()),
+            id="edge_case_missing_all_sections",
         ),
         pytest.param(
             {
                 "plates": {
                     "plate_mov_path": "/path/to/plate_mov",
-                }
+                },
+                "color": {
+                    "file_lut": "/path/to/file_lut",
+                },
             },
-            Settings(
+            AutoloaderConfig(
                 plates=AutoloadPlatesConfig(
                     plate_mov_path="/path/to/plate_mov",
                     plate_frames_path=None,
                     v000_mov_path=None,
                     v000_frames_path=None,
                     plate_first_frame_in_file=None,
-                )
+                ),
+                color=AutoloadColorConfig(
+                    file_lut="/path/to/file_lut",
+                ),
             ),
             id="edge_case_missing_some_keys",
         ),
@@ -130,7 +187,7 @@ def test_get_or_create_default_config(
                     assert config.get(section, key) == value
         else:
             # Check if existing config was read
-            default_config = Settings()
+            default_config = AutoloaderConfig()
             for section in config.sections():
                 for key in config[section]:
                     assert config[section][key] == getattr(
