@@ -206,10 +206,10 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
 
         event.reject()
 
-        self._autoload_plates(group)
-        self._autoload_color(group)
+        self.autoload_plates(group)
+        self.autoload_color(group)
 
-    def _autoload_plates(self, source_group: str):
+    def autoload_plates(self, source_group: str):
         if not self._settings.load_plates_enabled:
             logger.debug("Plate auto loader disabled")
             return
@@ -279,7 +279,7 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
             #     commands.setIntProperty(f"{switch_node}.mode.alignStartFrames", [1])
         return
 
-    def _autoload_color(self, source_group: str):
+    def autoload_color(self, source_group: str):
         # todo:
         # - build out LUT/CDL menu with configured values
 
