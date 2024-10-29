@@ -143,6 +143,20 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
         logger.setLevel(logging.DEBUG if self._debug else logging.INFO)
         commands.writeSettings(SETTINGS_NAME, "debug", self._debug)
 
+    def _find_file(self, source_path: Path, search_path: str) -> Path | None:
+        if not (file_path := Path(search_path)).is_absolute():
+            try:
+                file_path = next(source_path.parent.glob(search_path)).resolve()
+            except StopIteration:
+                logger.warning(f"Can't find file: {source_path.parent}/{search_path}")
+                return
+
+        if not file_path.is_file():
+            logger.warning(f"Can't load file: {file_path} is not a file")
+            return
+
+        return file_path
+
     def on_source_group_complete(self, event: "Event"):
         logger.debug(f"auto_load_plates: {event.contents()}")
         #  The contents of the "source-group-complete" looks like "group nodename;;action_type"
@@ -187,14 +201,9 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
                 logger.debug(f"{new_source_relative_path} not configured")
                 continue
 
-            try:
-                new_source_file = next(
-                    source_path.parent.glob(new_source_relative_path)
-                ).resolve()
-            except StopIteration:
-                logger.warning(
-                    f"Can't autoload: {_plate} {source_path.parent}/{new_source_relative_path} does not exist"
-                )
+            new_source_file = self._find_file(source_path, new_source_relative_path)
+            if not new_source_file:
+                logger.warning(f"Can't autoload: {_plate}")
                 continue
 
             # adding new media representations here interferes with the Flow Production Tracking Mode
