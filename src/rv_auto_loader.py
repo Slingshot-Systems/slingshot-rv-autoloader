@@ -162,9 +162,10 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
         source_path = Path(
             commands.getStringProperty(f"{file_source}.media.movie", 0, 1000)[0]
         )
-        if media_reps := commands.sourceMediaReps(file_source):
+        if (media_reps := commands.sourceMediaReps(file_source)) != [""]:
             self._enqueue_plate_autoloads(file_source, source_path, media_reps)
         else:
+            # no media reps, we need to add our default
             return self._add_default_media_rep(source_group, file_source, source_path)
 
     def _enqueue_plate_autoloads(
@@ -211,9 +212,9 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
     def _add_default_media_rep(
         self, source_group: str, file_source: str, source_path: Path
     ):
-        logger.debug("Adding 'Movie' media representation")
-        rep_node = commands.addSourceMediaRep(file_source, "Movie", [str(source_path)])
-        commands.setActiveSourceMediaRep(file_source, "Movie")
+        logger.debug("Adding 'Source' media representation")
+        rep_node = commands.addSourceMediaRep(file_source, "Source", [str(source_path)])
+        commands.setActiveSourceMediaRep(file_source, "Source")
 
         # flag for deletion in after_progressive_loading
         self._delete_node = source_group
