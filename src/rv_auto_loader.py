@@ -6,6 +6,7 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 from queue import Queue
+from typing import Callable
 
 from config import get_config_path, read_settings
 from rv import commands, extra_commands, rvtypes
@@ -15,11 +16,6 @@ from rv_schemas.menu import MenuItem
 logging.basicConfig()
 logger = logging.getLogger("SlingshotAutoLoader")
 logger.setLevel(logging.INFO)
-# todo:
-# - set PATH_SWAP environment variables during init, if configured?
-
-
-SETTINGS_NAME = "SLINGSHOT_AUTO_LOADER"
 
 
 @dataclass
@@ -30,9 +26,16 @@ class PendingMediaRep:
     tag: str | None = None
 
 
+@dataclass
+class Settings:
+    RV_SETTINGS_GROUP = "SLINGSHOT_AUTO_LOADER"
+    load_plates_enabled: bool = True
+    load_luts_enabled: bool = True
+    debug: bool = False
+
+
 class SlingshotAutoLoaderMode(rvtypes.MinorMode):
-    _enabled: bool = True
-    _debug: bool = False
+    _settings: Settings = Settings()
     _autoload_queue: Queue[PendingMediaRep] = Queue()
     _delete_node: str | None = None
 
@@ -41,10 +44,21 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
 
         self.config = read_settings()
 
-        self._enabled = commands.readSettings(SETTINGS_NAME, "enabled", self._enabled)
-        self._debug = commands.readSettings(SETTINGS_NAME, "debug", self._debug)
+        self._settings.load_plates_enabled = commands.readSettings(
+            self._settings.RV_SETTINGS_GROUP,
+            "load_plates_enabled",
+            self._settings.load_plates_enabled,
+        )
+        self._settings.load_luts_enabled = commands.readSettings(
+            self._settings.RV_SETTINGS_GROUP,
+            "load_luts_enabled",
+            self._settings.load_luts_enabled,
+        )
+        self._settings.debug = commands.readSettings(
+            self._settings.RV_SETTINGS_GROUP, "debug", self._settings.debug
+        )
 
-        logger.setLevel(logging.DEBUG if self._debug else logging.INFO)
+        logger.setLevel(logging.DEBUG if self._settings.debug else logging.INFO)
 
         init_bindings = [
             (
@@ -130,39 +144,46 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
                     ),
                     MenuItem("_").tuple(),
                     MenuItem(
-                        label="Enable",
-                        actionHook=self.toggle_enabled,
-                        stateHook=self.is_enabled,
+                        label="Autoload Plates/v000s",
+                        actionHook=self.toggle_setting("load_plates_enabled"),
+                        stateHook=self.is_enabled("load_plates_enabled"),
+                    ).tuple(),
+                    MenuItem(
+                        label="Autoload LUTs/CDLs",
+                        actionHook=self.toggle_setting("load_luts_enabled"),
+                        stateHook=self.is_enabled("load_luts_enabled"),
                     ).tuple(),
                     MenuItem(
                         label="Debug Logging",
-                        actionHook=self.toggle_debug,
-                        stateHook=lambda: commands.CheckedMenuState
-                        if self._debug
-                        else commands.UncheckedMenuState,
+                        actionHook=self.toggle_setting("debug"),
+                        stateHook=self.is_enabled("debug"),
                     ).tuple(),
                 ],
             )
         ]
 
-    def is_enabled(self):
-        print(f"is_enabled: {self._enabled} {str(type(self._enabled)).strip('><')}")
-        if self._enabled:
-            print("is_enabled")
-            return commands.CheckedMenuState
-        else:
-            print("is_disabled")
-            return commands.UncheckedMenuState
+    def is_enabled(self, settings_name: str) -> Callable[[], int]:
+        def _is_enabled() -> int:
+            return (
+                commands.CheckedMenuState
+                if getattr(self._settings, settings_name)
+                else commands.UncheckedMenuState
+            )
 
-    def toggle_enabled(self, event: "Event"):
-        self._enabled = not self._enabled
-        print(f"toggle_enabled -> {self._enabled}")
-        commands.writeSettings(SETTINGS_NAME, "enabled", self._enabled)
+        return _is_enabled
 
-    def toggle_debug(self, event: "Event"):
-        self._debug = not self._debug
-        logger.setLevel(logging.DEBUG if self._debug else logging.INFO)
-        commands.writeSettings(SETTINGS_NAME, "debug", self._debug)
+    def toggle_setting(self, settings_name: str) -> Callable[..., None]:
+        def _toggle(event: "Event"):
+            new_setting = not getattr(self._settings, settings_name)
+            setattr(self._settings, settings_name, new_setting)
+            commands.writeSettings(
+                self._settings.RV_SETTINGS_GROUP, settings_name, new_setting
+            )
+
+            if settings_name == "debug":
+                logger.setLevel(logging.DEBUG if new_setting else logging.INFO)
+
+        return _toggle
 
     def _find_file(self, source_path: Path, search_path: str) -> Path | None:
         if not (file_path := Path(search_path)).is_absolute():
@@ -189,8 +210,8 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
         self._autoload_color(group)
 
     def _autoload_plates(self, source_group: str):
-        if not self._enabled:
-            logger.debug("Auto loader disabled")
+        if not self._settings.load_plates_enabled:
+            logger.debug("Plate auto loader disabled")
             return
 
         file_source = extra_commands.nodesInGroupOfType(source_group, "RVFileSource")[0]
@@ -260,15 +281,10 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
 
     def _autoload_color(self, source_group: str):
         # todo:
-        # - separate enable toggles for plate and cdl loaders
-        # - get lut paths from config
-        # - file lut: decide between LUT (RVLookLUT), LinearToAlexaLogC (or any other node type), or none, from config
-        # - look lut: decide between LUT (RVLookLUT), or none, from config
-        # - move "file" lut/Linear node to RVLinearize in the RVLinearizePipelineGroup instead of in the LookPipeline
         # - build out LUT/CDL menu with configured values
 
-        if not self._enabled:
-            logger.debug("Auto loader disabled")
+        if not self._settings.load_luts_enabled:
+            logger.debug("LUT auto loader disabled")
             return
 
         file_source = extra_commands.nodesInGroupOfType(source_group, "RVFileSource")[0]
