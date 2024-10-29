@@ -280,9 +280,6 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
         return
 
     def autoload_color(self, source_group: str):
-        # todo:
-        # - build out LUT/CDL menu with configured values
-
         if not self._settings.load_luts_enabled:
             logger.debug("LUT auto loader disabled")
             return
