@@ -1,10 +1,10 @@
 from configparser import ConfigParser
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
-from src.config import (
+from src.slingshot_autoloader_config import (
     AutoloadColorConfig,
     AutoloaderConfig,
     AutoloadPlatesConfig,
@@ -48,6 +48,39 @@ from src.config import (
                 ),
             ),
             id="happy_path_all_keys_present",
+        ),
+        pytest.param(
+            {
+                "plates": {
+                    "plate_mov_path": None,
+                    "plate_frames_path": None,
+                    "v000_mov_path": None,
+                    "v000_frames_path": None,
+                    "plate_first_frame_in_file": None,
+                    "plate_cut_in_frame": None,
+                },
+                "color": {
+                    "file_lut": None,
+                    "look_cdl": None,
+                    "look_lut": None,
+                },
+            },
+            AutoloaderConfig(
+                plates=AutoloadPlatesConfig(
+                    plate_mov_path=None,
+                    plate_frames_path=None,
+                    v000_mov_path=None,
+                    v000_frames_path=None,
+                    plate_first_frame_in_file=None,
+                    plate_cut_in_frame=None,
+                ),
+                color=AutoloadColorConfig(
+                    file_lut=None,
+                    look_cdl=None,
+                    look_lut=None,
+                ),
+            ),
+            id="all_none_values",
         ),
         pytest.param(
             {
@@ -124,7 +157,10 @@ def test_read_settings(config_data, expected_settings):
     _config = ConfigParser(allow_no_value=True)
     _config.read_dict(config_data)
 
-    with patch("src.config.get_or_create_default_config", return_value=_config):
+    with patch(
+        "src.slingshot_autoloader_config.get_or_create_default_config",
+        return_value=_config,
+    ):
         # Act
         if isinstance(expected_settings, type) and issubclass(
             expected_settings, Exception
@@ -174,7 +210,9 @@ def test_get_or_create_default_config(
         with config_file.open("w") as f:
             config.write(f)
 
-    with patch("src.config.get_config_path", return_value=config_file):
+    with patch(
+        "src.slingshot_autoloader_config.get_config_path", return_value=config_file
+    ):
         config = get_or_create_default_config()
         print(config.__dict__)
 

@@ -6,12 +6,14 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 from queue import Queue
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
-from config import get_config_path, read_settings
 from rv import commands, extra_commands, rvtypes
-from rv_schemas.event import Event
-from rv_schemas.menu import MenuItem
+from rv_menu_schema import MenuItem
+from slingshot_autoloader_config import get_config_path, read_settings
+
+if TYPE_CHECKING:
+    from rv_schemas.event import Event
 
 logging.basicConfig()
 logger = logging.getLogger("SlingshotAutoLoader")
@@ -240,7 +242,7 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
 
             new_source_relative_path: str = getattr(self.config.plates, _plate)
             if not new_source_relative_path:
-                logger.debug(f"{new_source_relative_path} not configured")
+                logger.debug(f"{_plate} not configured")
                 continue
 
             new_source_file = self._find_file(source_path, new_source_relative_path)
