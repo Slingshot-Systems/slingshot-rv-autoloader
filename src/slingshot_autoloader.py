@@ -242,7 +242,7 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
 
             new_source_relative_path: str = getattr(self.config.plates, _plate)
             if not new_source_relative_path:
-                logger.debug(f"{new_source_relative_path} not configured")
+                logger.debug(f"{_plate} not configured")
                 continue
 
             new_source_file = self._find_file(source_path, new_source_relative_path)
