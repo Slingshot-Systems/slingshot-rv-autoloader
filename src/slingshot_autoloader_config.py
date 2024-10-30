@@ -35,10 +35,14 @@ def read_settings() -> AutoloaderConfig:
             plate_frames_path=_config["plates"].get("plate_frames_path"),
             v000_mov_path=_config["plates"].get("v000_mov_path"),
             v000_frames_path=_config["plates"].get("v000_frames_path"),
-            plate_first_frame_in_file=_config["plates"].getint(
-                "plate_first_frame_in_file"
-            ),
-            plate_cut_in_frame=_config["plates"].getint("plate_cut_in_frame"),
+            plate_first_frame_in_file=int(
+                _config["plates"]["plate_first_frame_in_file"]
+            )
+            if _config["plates"].get("plate_first_frame_in_file")
+            else None,
+            plate_cut_in_frame=int(_config["plates"]["plate_cut_in_frame"])
+            if _config["plates"].get("plate_cut_in_frame")
+            else None,
         )
         if _config.has_section("plates")
         else AutoloadPlatesConfig(),
