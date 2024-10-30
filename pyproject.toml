@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "rv-auto-loader"
+version = "0.1"
+description = "Slingshot RV Plate/v000/LUT/CDL Auto Loader"
+authors = ["slingshotvfx <146885925+slingshotvfx@users.noreply.github.com>"]
+license = "Apache-2.0"
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "~3.10"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.5.2"
+pytest = "^8.3.3"
+pyside2 = "^5.15.2.1"
+
+[tool.pytest.ini_options]
+pythonpath = "."
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

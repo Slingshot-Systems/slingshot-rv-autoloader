@@ -1,0 +1,55 @@
+; SLINGSHOT AUTOLOADER CONFIG
+; uncomment any option to enable auto-loading of that specific file type
+
+; configuration settings for plate/v000 auto loading
+[plates]
+; the path relative to the source media to search for a plate movie.
+; Can use wildcards.
+;plate_mov_path = ../plate/*plt*.mov
+
+; the path relative to the source media to search for a plate frame
+; note: use a path to any single frame, and the image sequence will be inferred
+; Can use wildcards.
+;plate_frames_path = ../plate/*/*x*/*.exr
+
+; the path relative to the source media to search for a v000 movie
+; Can use wildcards.
+;v000_mov_path = ./*plt*v000*.mov
+
+; the path relative to the source media to search for a v000 frame
+; note: use a path to any single frame, and the image sequence will be inferred
+; Can use wildcards.
+;v000_frames_path = ../exrs/*v000/*x*/
+
+; the first frame of the plate will be set to this number
+; use this to override any baked in frame numbers in your plates
+; Usually, this is the start frame (1001) minus your handles (10 or 24)
+;plate_first_frame_in_file = 985
+
+; the cut in frame of the plate frames will be set to this number.
+; use this to align the first plate frame displayed to your v000 media.
+; Usually, this is 1000 (the first frame of the v000, including slate)
+;plate_cut_in_frame = 1000
+
+
+; settings for LUT/CDL auto loading
+[color]
+; The file LUT, which is applied first.
+; This can be one of three things:
+; - An aboslute path to a LUT (e.g. /Path/To/Lut.cube)
+; - A path relative to the source media to a LUT, with wildcard support (e.g. ../*.cube)
+; - The name of an RV node, as available in the "New Node by Type" menu. (e.g. LinearToAlexaLogC)
+;file_lut = /Path/to/Show_LUT.cube
+
+; The look CDL, which is applied second.
+; This can be one of two things:
+; - An aboslute path to a CDL (e.g. /Path/To/CDL.cdl)
+; - A path relative to the source media to a CDL, with wildcard support (e.g. ../*.ccc) 
+;look_cdl = ../../../plate/*/*.ccc
+
+; The look LUT, which is applied last.
+; This can be one of two things:
+; - An aboslute path to a LUT (e.g. /Path/To/Lut.cube)
+; - A path relative to the source media to a LUT, with wildcard support (e.g. ../*.cube)
+; Note: A Rec709ToLinear node will automatically be added after this LUT
+;look_lut = ../../../plate/*/*.cube

@@ -44,7 +44,7 @@ class ContentType(IntEnum):
 
 
 class Event(Protocol):
-    """Interface for the Event object with type checking."""
+    """An RV Event object."""
 
     def pointer(self) -> Vec2:
         """Returns the location of the pointer relative to the view."""
