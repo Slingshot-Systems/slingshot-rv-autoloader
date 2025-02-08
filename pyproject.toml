@@ -11,8 +11,8 @@ package-mode = false
 python = "~3.10"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.5.2"
-pytest = "^8.3.3"
+ruff = "^0.9.5"
+pytest = "^8.3.4"
 pyside2 = "^5.15.2.1"
 
 [tool.pytest.ini_options]
