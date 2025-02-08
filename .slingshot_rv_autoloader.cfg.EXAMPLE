@@ -1,7 +1,8 @@
 ; SLINGSHOT AUTOLOADER CONFIG
-; uncomment any option to enable auto-loading of that specific file type
 
-; configuration settings for plate/v000 auto loading
+; uncomment any option below to enable auto-loading of that specific file type
+
+; configuration settings for plates auto loading
 [plates]
 ; the path relative to the source media to search for a plate movie.
 ; Can use wildcards.
@@ -12,15 +13,6 @@
 ; Can use wildcards.
 ;plate_frames_path = ../plate/*/*x*/*.exr
 
-; the path relative to the source media to search for a v000 movie
-; Can use wildcards.
-;v000_mov_path = ./*plt*v000*.mov
-
-; the path relative to the source media to search for a v000 frame
-; note: use a path to any single frame, and the image sequence will be inferred
-; Can use wildcards.
-;v000_frames_path = ../exrs/*v000/*x*/
-
 ; the first frame of the plate will be set to this number
 ; use this to override any baked in frame numbers in your plates
 ; Usually, this is the start frame (1001) minus your handles (10 or 24)
@@ -30,6 +22,22 @@
 ; use this to align the first plate frame displayed to your v000 media.
 ; Usually, this is 1000 (the first frame of the v000, including slate)
 ;plate_cut_in_frame = 1000
+
+; other media auto loading
+; you can include as many different paths as you want here
+[other]
+; example: v000 movie
+; Can use wildcards.
+;v000 = ./*v000.mov
+
+; example: v000 frames
+; note: use a path to any single frame, and the image sequence will be inferred
+; Can use wildcards.
+;v000_Frames = ../exrs/*v000/*x*/
+
+; example: prores
+; note: ${version} will be replaced with the current version number of the loaded media
+;prores = ./*${version}_prores.mov
 
 
 ; settings for LUT/CDL auto loading
