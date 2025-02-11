@@ -3,8 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
-from src.slingshot_autoloader_config import (
+from slingshot_autoloader_config import (
     AutoloadColorConfig,
     AutoloaderConfig,
     AutoloadMainConfig,
@@ -170,7 +169,7 @@ def test_read_settings(config_data, expected_settings):
     _config.read_dict(config_data)
 
     with patch(
-        "src.slingshot_autoloader_config.get_or_create_default_config",
+        "slingshot_autoloader_config.get_or_create_default_config",
         return_value=_config,
     ):
         # Act
@@ -223,9 +222,7 @@ def test_get_or_create_default_config(
         with config_file.open("w") as f:
             config.write(f)
 
-    with patch(
-        "src.slingshot_autoloader_config.get_config_path", return_value=config_file
-    ):
+    with patch("slingshot_autoloader_config.get_config_path", return_value=config_file):
         config = get_or_create_default_config()
         print(config.__dict__)
 
