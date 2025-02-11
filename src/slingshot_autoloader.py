@@ -3,9 +3,11 @@
 
 
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from queue import Queue
+from string import Template
 from typing import TYPE_CHECKING, Callable
 
 from rv import commands, extra_commands, rvtypes
@@ -32,6 +34,7 @@ class PendingMediaRep:
 class Settings:
     RV_SETTINGS_GROUP = "SLINGSHOT_AUTO_LOADER"
     load_plates_enabled: bool = True
+    load_other_enabled: bool = True
     load_luts_enabled: bool = True
     debug: bool = False
 
@@ -50,6 +53,11 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
             self._settings.RV_SETTINGS_GROUP,
             "load_plates_enabled",
             self._settings.load_plates_enabled,
+        )
+        self._settings.load_other_enabled = commands.readSettings(
+            self._settings.RV_SETTINGS_GROUP,
+            "load_other_enabled",
+            self._settings.load_other_enabled,
         )
         self._settings.load_luts_enabled = commands.readSettings(
             self._settings.RV_SETTINGS_GROUP,
@@ -93,7 +101,42 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
                         "Current Configuration",
                         [
                             MenuItem(
-                                "LUT/CDLs",
+                                "Autoload Plates",
+                                stateHook=lambda: commands.DisabledMenuState,
+                            ).tuple(),
+                            MenuItem(
+                                label=f"    Plate MOVs: {self.config.plates.plate_mov_path}",
+                                stateHook=lambda: commands.DisabledMenuState,
+                            ).tuple(),
+                            MenuItem(
+                                label=f"    Plate Frames: {self.config.plates.plate_frames_path}",
+                                stateHook=lambda: commands.DisabledMenuState,
+                            ).tuple(),
+                            MenuItem(
+                                label=f"    Plates first frame is: {self.config.plates.plate_first_frame_in_file}",
+                                stateHook=lambda: commands.DisabledMenuState,
+                            ).tuple(),
+                            MenuItem(
+                                label=f"    Plates cut in on: {self.config.plates.plate_cut_in_frame}",
+                                stateHook=lambda: commands.DisabledMenuState,
+                            ).tuple(),
+                            MenuItem("_").tuple(),
+                            MenuItem(
+                                "Autoload Other Media",
+                                stateHook=lambda: commands.DisabledMenuState,
+                            ).tuple(),
+                        ]
+                        + [
+                            MenuItem(
+                                label=f"    {media_rep.replace('_', ' ')}: {path}",
+                                stateHook=lambda: commands.DisabledMenuState,
+                            ).tuple()
+                            for media_rep, path in self.config.other.items()
+                        ]
+                        + [
+                            MenuItem("_").tuple(),
+                            MenuItem(
+                                "Autoload LUT/CDLs",
                                 stateHook=lambda: commands.DisabledMenuState,
                             ).tuple(),
                             MenuItem(
@@ -110,35 +153,6 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
                             ).tuple(),
                             MenuItem("_").tuple(),
                             MenuItem(
-                                "Plates/v000s",
-                                stateHook=lambda: commands.DisabledMenuState,
-                            ).tuple(),
-                            MenuItem(
-                                label=f"    Plate MOVs: {self.config.plates.plate_mov_path}",
-                                stateHook=lambda: commands.DisabledMenuState,
-                            ).tuple(),
-                            MenuItem(
-                                label=f"    Plate Frames: {self.config.plates.plate_frames_path}",
-                                stateHook=lambda: commands.DisabledMenuState,
-                            ).tuple(),
-                            MenuItem(
-                                label=f"    v000 MOVs: {self.config.plates.v000_mov_path}",
-                                stateHook=lambda: commands.DisabledMenuState,
-                            ).tuple(),
-                            MenuItem(
-                                label=f"    v000 Frames: {self.config.plates.v000_frames_path}",
-                                stateHook=lambda: commands.DisabledMenuState,
-                            ).tuple(),
-                            MenuItem(
-                                label=f"    Plates first frame is: {self.config.plates.plate_first_frame_in_file}",
-                                stateHook=lambda: commands.DisabledMenuState,
-                            ).tuple(),
-                            MenuItem(
-                                label=f"    Plates cut in on: {self.config.plates.plate_cut_in_frame}",
-                                stateHook=lambda: commands.DisabledMenuState,
-                            ).tuple(),
-                            MenuItem("_").tuple(),
-                            MenuItem(
                                 label=f"To configure these, edit {get_config_path().name}",
                                 stateHook=lambda: commands.DisabledMenuState,
                             ).tuple(),
@@ -146,9 +160,14 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
                     ),
                     MenuItem("_").tuple(),
                     MenuItem(
-                        label="Autoload Plates/v000s",
+                        label="Autoload Plates",
                         actionHook=self.toggle_setting("load_plates_enabled"),
                         stateHook=self.is_enabled("load_plates_enabled"),
+                    ).tuple(),
+                    MenuItem(
+                        label="Autoload Other Media",
+                        actionHook=self.toggle_setting("load_other_enabled"),
+                        stateHook=self.is_enabled("load_other_enabled"),
                     ).tuple(),
                     MenuItem(
                         label="Autoload LUTs/CDLs",
@@ -188,6 +207,11 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
         return _toggle
 
     def _find_file(self, source_path: Path, search_path: str) -> Path | None:
+        if matches := re.search(
+            self.config.main.version_regex, source_path.name, re.IGNORECASE
+        ):
+            search_path = Template(search_path).safe_substitute(**matches.groupdict())
+
         if not (file_path := Path(search_path)).is_absolute():
             try:
                 file_path = next(source_path.parent.glob(search_path)).resolve()
@@ -208,12 +232,15 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
 
         event.reject()
 
-        self.autoload_plates(group)
+        self.autoload_media(group)
         self.autoload_color(group)
 
-    def autoload_plates(self, source_group: str):
-        if not self._settings.load_plates_enabled:
-            logger.debug("Plate auto loader disabled")
+    def autoload_media(self, source_group: str):
+        if (
+            not self._settings.load_plates_enabled
+            and not self._settings.load_other_enabled
+        ):
+            logger.debug("Plate and other auto loaders disabled")
             return
 
         file_source = extra_commands.nodesInGroupOfType(source_group, "RVFileSource")[0]
@@ -229,38 +256,54 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
     def _enqueue_plate_autoloads(
         self, file_source: str, source_path: Path, media_reps: list[str]
     ):
-        _media_rep_name_lookup = {
-            "plate_mov_path": "Plate",
-            "plate_frames_path": "Plate Frames",
-            "v000_mov_path": "v000",
-            "v000_frames_path": "v000 Frames",
-        }
+        if self._settings.load_plates_enabled:
+            _media_rep_name_lookup = {
+                "plate_mov_path": "Plate",
+                "plate_frames_path": "Plate Frames",
+            }
 
-        for _plate, media_rep_name in _media_rep_name_lookup.items():
-            if media_rep_name in media_reps:
-                continue
+            for _plate, media_rep_name in _media_rep_name_lookup.items():
+                if media_rep_name in media_reps:
+                    continue
 
-            new_source_relative_path: str = getattr(self.config.plates, _plate)
-            if not new_source_relative_path:
-                logger.debug(f"{_plate} not configured")
-                continue
+                new_source_relative_path: str = getattr(self.config.plates, _plate)
+                if not new_source_relative_path:
+                    logger.debug(f"{_plate} not configured")
+                    continue
 
-            new_source_file = self._find_file(source_path, new_source_relative_path)
-            if not new_source_file:
-                logger.warning(f"Can't autoload: {_plate}")
-                continue
+                new_source_file = self._find_file(source_path, new_source_relative_path)
+                if not new_source_file:
+                    logger.warning(f"Can't autoload: {_plate}")
+                    continue
 
-            # adding new media representations here interferes with the Flow Production Tracking Mode
-            # specifically in shotgrid_mode.mu method: afterProgressiveLoading (void; Event event)
-            #      > ERROR: after progressive loading, number of new sources (%s) != infos (%s)"
-            # an error is thrown and the Flow sources don't get updated with info from the Flow fields
-            # so we queue up our changes and then run them all after progressive loading is done.
-            logger.debug(f"Queueing autoload {media_rep_name} {new_source_file}")
-            self._autoload_queue.put(
-                PendingMediaRep(
-                    file_source, media_rep_name, new_source_file, "autoload"
+                # adding new media representations here interferes with the Flow Production Tracking Mode
+                # specifically in shotgrid_mode.mu method: afterProgressiveLoading (void; Event event)
+                #      > ERROR: after progressive loading, number of new sources (%s) != infos (%s)"
+                # an error is thrown and the Flow sources don't get updated with info from the Flow fields
+                # so we queue up our changes and then run them all after progressive loading is done.
+                logger.debug(f"Queueing autoload {media_rep_name} {new_source_file}")
+                self._autoload_queue.put(
+                    PendingMediaRep(
+                        file_source, media_rep_name, new_source_file, "autoload"
+                    )
                 )
-            )
+        if self._settings.load_other_enabled:
+            for name, path in self.config.other.items():
+                media_rep_name = name.replace("_", " ")
+                if media_rep_name in media_reps:
+                    continue
+
+                new_source_file = self._find_file(source_path, path)
+                if not new_source_file:
+                    logger.warning(f"Can't autoload: {name}")
+                    continue
+
+                logger.debug(f"Queueing autoload {media_rep_name} {new_source_file}")
+                self._autoload_queue.put(
+                    PendingMediaRep(
+                        file_source, media_rep_name, new_source_file, "autoload"
+                    )
+                )
 
     def _add_default_media_rep(
         self, source_group: str, file_source: str, source_path: Path

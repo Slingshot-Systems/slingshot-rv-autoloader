@@ -7,6 +7,7 @@ import pytest
 from src.slingshot_autoloader_config import (
     AutoloadColorConfig,
     AutoloaderConfig,
+    AutoloadMainConfig,
     AutoloadPlatesConfig,
     get_or_create_default_config,
     read_settings,
@@ -18,13 +19,19 @@ from src.slingshot_autoloader_config import (
     [
         pytest.param(
             {
+                "main": {
+                    "version_regex": "test_regex",
+                },
                 "plates": {
                     "plate_mov_path": "/path/to/plate_mov",
                     "plate_frames_path": "/path/to/plate_frames",
-                    "v000_mov_path": "/path/to/v000_mov",
-                    "v000_frames_path": "/path/to/v000_frames",
                     "plate_first_frame_in_file": 5,
                     "plate_cut_in_frame": 1000,
+                },
+                "other": {
+                    "v000": "/path/to/v000_mov",
+                    "v000_Frames": "/path/to/v000_frames",
+                    "prores": r"./*${version}_prores.mov",
                 },
                 "color": {
                     "file_lut": "/path/to/file_lut",
@@ -33,14 +40,18 @@ from src.slingshot_autoloader_config import (
                 },
             },
             AutoloaderConfig(
+                main=AutoloadMainConfig(version_regex="test_regex"),
                 plates=AutoloadPlatesConfig(
                     plate_mov_path="/path/to/plate_mov",
                     plate_frames_path="/path/to/plate_frames",
-                    v000_mov_path="/path/to/v000_mov",
-                    v000_frames_path="/path/to/v000_frames",
                     plate_first_frame_in_file=5,
                     plate_cut_in_frame=1000,
                 ),
+                other={
+                    "v000": "/path/to/v000_mov",
+                    "v000_Frames": "/path/to/v000_frames",
+                    "prores": r"./*${version}_prores.mov",
+                },
                 color=AutoloadColorConfig(
                     file_lut="/path/to/file_lut",
                     look_cdl="/path/to/look_cdl",
@@ -59,6 +70,11 @@ from src.slingshot_autoloader_config import (
                     "plate_first_frame_in_file": None,
                     "plate_cut_in_frame": None,
                 },
+                "other": {
+                    "v000": None,
+                    "v000_Frames": None,
+                    "prores": None,
+                },
                 "color": {
                     "file_lut": None,
                     "look_cdl": None,
@@ -66,14 +82,14 @@ from src.slingshot_autoloader_config import (
                 },
             },
             AutoloaderConfig(
+                main=AutoloadMainConfig(version_regex=r"_(?P<version>v\d+)"),
                 plates=AutoloadPlatesConfig(
                     plate_mov_path=None,
                     plate_frames_path=None,
-                    v000_mov_path=None,
-                    v000_frames_path=None,
                     plate_first_frame_in_file=None,
                     plate_cut_in_frame=None,
                 ),
+                other={},
                 color=AutoloadColorConfig(
                     file_lut=None,
                     look_cdl=None,
@@ -87,8 +103,6 @@ from src.slingshot_autoloader_config import (
                 "plates": {
                     "plate_mov_path": "/path/to/plate_mov",
                     "plate_frames_path": "/path/to/plate_frames",
-                    "v000_mov_path": "/path/to/v000_mov",
-                    "v000_frames_path": "/path/to/v000_frames",
                     "plate_first_frame_in_file": 5,
                     "plate_cut_in_frame": 1000,
                 }
@@ -97,8 +111,6 @@ from src.slingshot_autoloader_config import (
                 plates=AutoloadPlatesConfig(
                     plate_mov_path="/path/to/plate_mov",
                     plate_frames_path="/path/to/plate_frames",
-                    v000_mov_path="/path/to/v000_mov",
-                    v000_frames_path="/path/to/v000_frames",
                     plate_first_frame_in_file=5,
                     plate_cut_in_frame=1000,
                 )
@@ -140,9 +152,8 @@ from src.slingshot_autoloader_config import (
                 plates=AutoloadPlatesConfig(
                     plate_mov_path="/path/to/plate_mov",
                     plate_frames_path=None,
-                    v000_mov_path=None,
-                    v000_frames_path=None,
                     plate_first_frame_in_file=None,
+                    plate_cut_in_frame=None,
                 ),
                 color=AutoloadColorConfig(
                     file_lut="/path/to/file_lut",
@@ -155,6 +166,7 @@ from src.slingshot_autoloader_config import (
 def test_read_settings(config_data, expected_settings):
     # Arrange
     _config = ConfigParser(allow_no_value=True)
+    _config.optionxform = str  # type: ignore
     _config.read_dict(config_data)
 
     with patch(
@@ -179,15 +191,15 @@ def test_read_settings(config_data, expected_settings):
     [
         pytest.param(
             False,
-            {"section1": {"key1": "value1"}, "section2": {"key2": "value2"}},
-            ["section1", "section2"],
+            {"section1": {"key1": "value1"}, "sEction2": {"kEy2": "vAlue2"}},
+            ["section1", "sEction2"],
             id="create_default_config",
         ),
         pytest.param(False, {}, [], id="create_empty_default_config"),
         pytest.param(
             True,
-            {"section1": {"key1": "value1"}},
-            ["section1"],
+            {"sectioN1": {"kEy1": "vAlue1"}},
+            ["sectioN1"],
             id="read_existing_config",
         ),
     ],
@@ -204,6 +216,7 @@ def test_get_or_create_default_config(
     if config_exists:
         # Create an actual .ini file with the provided settings
         config = ConfigParser()
+        config.optionxform = str  # type: ignore
         for section, keys in settings.items():
             config[section] = keys
 
@@ -223,6 +236,8 @@ def test_get_or_create_default_config(
                 assert config.has_section(section)
                 for key, value in keys.items():
                     assert config.get(section, key) == value
+                for key, value in config[section].items():
+                    assert key in keys
         else:
             # Check if existing config was read
             default_config = AutoloaderConfig()
