@@ -1,5 +1,10 @@
 ; SLINGSHOT AUTOLOADER CONFIG
 
+[main]
+; the regular expression used to parse the version number from the media filename
+; you can leave this default if you use the standard "_v###" convention
+version_regex = _(?P<version>v\d+)
+
 ; uncomment any option below to enable auto-loading of that specific file type
 
 ; configuration settings for plates auto loading

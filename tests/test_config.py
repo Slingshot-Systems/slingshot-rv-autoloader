@@ -7,6 +7,7 @@ import pytest
 from src.slingshot_autoloader_config import (
     AutoloadColorConfig,
     AutoloaderConfig,
+    AutoloadMainConfig,
     AutoloadPlatesConfig,
     get_or_create_default_config,
     read_settings,
@@ -18,6 +19,9 @@ from src.slingshot_autoloader_config import (
     [
         pytest.param(
             {
+                "main": {
+                    "version_regex": "test_regex",
+                },
                 "plates": {
                     "plate_mov_path": "/path/to/plate_mov",
                     "plate_frames_path": "/path/to/plate_frames",
@@ -36,6 +40,7 @@ from src.slingshot_autoloader_config import (
                 },
             },
             AutoloaderConfig(
+                main=AutoloadMainConfig(version_regex="test_regex"),
                 plates=AutoloadPlatesConfig(
                     plate_mov_path="/path/to/plate_mov",
                     plate_frames_path="/path/to/plate_frames",
@@ -77,6 +82,7 @@ from src.slingshot_autoloader_config import (
                 },
             },
             AutoloaderConfig(
+                main=AutoloadMainConfig(version_regex=r"_(?P<version>v\d+)"),
                 plates=AutoloadPlatesConfig(
                     plate_mov_path=None,
                     plate_frames_path=None,

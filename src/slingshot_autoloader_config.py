@@ -4,6 +4,11 @@ from pathlib import Path
 
 
 @dataclass(frozen=True)
+class AutoloadMainConfig:
+    version_regex: str = r"_(?P<version>v\d+)"
+
+
+@dataclass(frozen=True)
 class AutoloadPlatesConfig:
     plate_mov_path: str | None = None
     plate_frames_path: str | None = None
@@ -20,6 +25,7 @@ class AutoloadColorConfig:
 
 @dataclass(frozen=True)
 class AutoloaderConfig:
+    main: AutoloadMainConfig = AutoloadMainConfig()
     plates: AutoloadPlatesConfig = AutoloadPlatesConfig()
     other: dict[str, str] = field(default_factory=dict)
     color: AutoloadColorConfig = AutoloadColorConfig()
@@ -29,6 +35,12 @@ def read_settings() -> AutoloaderConfig:
     _config = get_or_create_default_config()
 
     return AutoloaderConfig(
+        main=AutoloadMainConfig(
+            version_regex=_config["main"].get("version_regex")
+            or AutoloadMainConfig.__dataclass_fields__["version_regex"].default
+        )
+        if _config.has_section("main")
+        else AutoloadMainConfig(),
         plates=AutoloadPlatesConfig(
             plate_mov_path=_config["plates"].get("plate_mov_path"),
             plate_frames_path=_config["plates"].get("plate_frames_path"),

@@ -3,9 +3,11 @@
 
 
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from queue import Queue
+from string import Template
 from typing import TYPE_CHECKING, Callable
 
 from rv import commands, extra_commands, rvtypes
@@ -205,6 +207,11 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
         return _toggle
 
     def _find_file(self, source_path: Path, search_path: str) -> Path | None:
+        if matches := re.search(
+            self.config.main.version_regex, source_path.name, re.IGNORECASE
+        ):
+            search_path = Template(search_path).safe_substitute(**matches.groupdict())
+
         if not (file_path := Path(search_path)).is_absolute():
             try:
                 file_path = next(source_path.parent.glob(search_path)).resolve()
