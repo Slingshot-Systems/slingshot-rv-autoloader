@@ -19,7 +19,8 @@ pyside2 = "^5.15.2.1"
 extend-exclude = ["rv"]
 
 [tool.pytest.ini_options]
-pythonpath = "."
+pythonpath = "src"
+addopts = ["--import-mode=importlib"]
 
 [build-system]
 requires = ["poetry-core"]
