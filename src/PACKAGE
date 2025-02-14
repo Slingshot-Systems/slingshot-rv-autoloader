@@ -1,9 +1,9 @@
 package: Slingshot Auto Loader
 author: Slingshot Systems Inc.
 organization: Slingshot Systems Inc.
-version: 1.1
+version: 1.2
 requires: ""
-rv: 4.0.7
+rv: 2024.1
 openrv: 1.0.0
 optional: true
 
