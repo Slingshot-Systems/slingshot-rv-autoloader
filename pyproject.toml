@@ -16,6 +16,8 @@ ruff = "^0.9.5"
 pytest = "^8.3.4"
 pyside2 = "^5.15.2.1"
 types-opencolorio = "^2.2.1.2"
+rich = "^13.9.4"
+poethepoet = "^0.32.2"
 
 [tool.ruff]
 extend-exclude = ["rv"]
@@ -27,3 +29,10 @@ addopts = ["--import-mode=importlib"]
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poe.tasks]
+lint = "ruff check --fix src"
+test = "pytest tests"
+format = "ruff format src"
+build = "poetry run python scripts/build.py"
+release = ["lint", "format", "test", "build"]
