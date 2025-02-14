@@ -29,3 +29,10 @@ addopts = ["--import-mode=importlib"]
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poe.tasks]
+lint = "ruff check --fix src"
+test = "pytest tests"
+format = "ruff format src"
+build = "poetry run python scripts/build.py"
+release = ["lint", "format", "test", "build"]
