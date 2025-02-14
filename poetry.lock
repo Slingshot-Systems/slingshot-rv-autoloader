@@ -41,6 +41,53 @@ files = [
 ]
 
 [[package]]
+name = "opencolorio"
+version = "2.4.1"
+description = "OpenColorIO (OCIO) is a complete color management solution geared towards motion picture production with an emphasis on visual effects and computer animation."
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "opencolorio-2.4.1-cp310-cp310-macosx_10_13_x86_64.whl", hash = "sha256:194e076585e3bdc65a54d14bd9e28fa21fc0d344ad4d9f301077b0652872eb2c"},
+    {file = "opencolorio-2.4.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:cd01341f2db3d20bd16329512cf6ee1f82ccf52d3f6b898efe7bf623776d2f10"},
+    {file = "opencolorio-2.4.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:9bd6df99da8f41708a47a6a2fff7e83d144e3c1882dc94a319e7022550a36eab"},
+    {file = "opencolorio-2.4.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fc08afaab49d965e6cfe5afd0ce042800a985229158d0fef4c8c27118f0c1021"},
+    {file = "opencolorio-2.4.1-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:4d71d666e6bd406e05caf36e931b5a4289d23ea94fd97f3dc3f9f81f3b6674a2"},
+    {file = "opencolorio-2.4.1-cp310-cp310-win_amd64.whl", hash = "sha256:6dfe732ad861b7a72e97b0ba86bb635133e21fd05757a68b79ffc2ec0f3d999b"},
+    {file = "opencolorio-2.4.1-cp311-cp311-macosx_10_13_x86_64.whl", hash = "sha256:b5ca7fbd632a4d9f0139b2a41cd0d925b801822199eb80a813c49d4c3aa7a643"},
+    {file = "opencolorio-2.4.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:f665652ce1eb4db7251dcc26a43a8e9f13afb7f5df785b9ad801132e06245a3f"},
+    {file = "opencolorio-2.4.1-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:852b7d2e02e826d839339a8043b7ef6cca2db2aed2c3f3057a1f572d4b701cf7"},
+    {file = "opencolorio-2.4.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:817a01ba96e3240e8ef412598001cd6e3ed8188bfd68b3108e7a78d64ce3607d"},
+    {file = "opencolorio-2.4.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:f62765fe37e9d772108a01e95a29392540bc5dc9b98511a65bae4aacb13fcbd8"},
+    {file = "opencolorio-2.4.1-cp311-cp311-win_amd64.whl", hash = "sha256:8bc4cd00bdd452ff6bc1bd05718ba634ebed8e63e9dbf76dba27f415a6c716df"},
+    {file = "opencolorio-2.4.1-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:d38ea62936ec526a0d1aa489fdc6be6a11cae97df97ad3e0ead98f848890b6b8"},
+    {file = "opencolorio-2.4.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:03fe5f5c507cba442cb01c060c6751db9d3d5ddf921dc4bd24608531ea8d625c"},
+    {file = "opencolorio-2.4.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b1846592f60372449e81fee1dd89e9181c240834c21e8bbfc6c57cf57eaf0f58"},
+    {file = "opencolorio-2.4.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:df62964dbd71f4c5ad070c7ea3cccb12d6a8bf8b34a3bd3c0047f850dd2f005a"},
+    {file = "opencolorio-2.4.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e481836f67c8faeb3be0ff0773e55c126bf5efa9070c2e010314f71c08733f54"},
+    {file = "opencolorio-2.4.1-cp312-cp312-win_amd64.whl", hash = "sha256:2726a4b8b6098f1bfa5b80d03980196d60bb0dcca3b99e71beeaf187f2be2064"},
+    {file = "opencolorio-2.4.1-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:3be793b8eda0bfb3a12d6add336ae76a79cfbc4275aba76fb68641706bd690ae"},
+    {file = "opencolorio-2.4.1-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:8001e53fd6e96f08207ddad36537163e068da4ba5baf9ee3412fb6532f3e36b9"},
+    {file = "opencolorio-2.4.1-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:70ad95af7986189998b55d77a99f41b56160affdb0c3c5d6821871d5beff18dc"},
+    {file = "opencolorio-2.4.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fc9c11ea322d3aef93f1aad3adc061136ea4428be4a9f5333870bf60db62982d"},
+    {file = "opencolorio-2.4.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:c0582afbcf092d7f98b907d8380692566b95975a426dd733fd9b0c69984ee733"},
+    {file = "opencolorio-2.4.1-cp313-cp313-win_amd64.whl", hash = "sha256:2b8abbfc265cc83f19e212bf551589094609c23c9713b6487f83f8b4447ece56"},
+    {file = "opencolorio-2.4.1-cp38-cp38-macosx_10_13_x86_64.whl", hash = "sha256:89c3f9bb0b174726ac00344fbc457b6690c49d27c04cb348c3822bbd50e0aa3c"},
+    {file = "opencolorio-2.4.1-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:7eafc6972bcad98daa0ed7b5425eda4c8c09caffc194c144febc7f2bd7ebd9b0"},
+    {file = "opencolorio-2.4.1-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:22dd96ecf6e9e6640a8b9a6ccd842052b7809935614a37c825528a72bc0a9e0a"},
+    {file = "opencolorio-2.4.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:16118776ef7ab63e21ffbf337002f6e5ab8b5d09a1f6dba9922f4f0e72cbe070"},
+    {file = "opencolorio-2.4.1-cp38-cp38-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:22eb47f9689a58d77faf3ecbea2654699eea5029fc864eb3f6e1f7c7a00a09c1"},
+    {file = "opencolorio-2.4.1-cp38-cp38-win_amd64.whl", hash = "sha256:a1e764e304cb1c97729c127c19b60178d6e0fbc4985973ea9e31e6b27fbcd67b"},
+    {file = "opencolorio-2.4.1-cp39-cp39-macosx_10_13_x86_64.whl", hash = "sha256:5c08c4f20b5c485ec6e48d72257c311dc89252922cebdd929ac34dd437cf3402"},
+    {file = "opencolorio-2.4.1-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:b595194cfb5d8a06f4fec666786f0a359b4c01d14356f3ad990ff4919684b35b"},
+    {file = "opencolorio-2.4.1-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:76f2981748c82affc60da90c7a6d23b5b18b063e8c1f361e64df907075f98072"},
+    {file = "opencolorio-2.4.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a3183bf11d7d8cc7e73f5023bae05f0ea17f83d2cca66c45c8cd2a43ccdfb037"},
+    {file = "opencolorio-2.4.1-cp39-cp39-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:3389b6953db49705209104318b3f7d4a73ef010a5882f654b75743cfc31b972b"},
+    {file = "opencolorio-2.4.1-cp39-cp39-win_amd64.whl", hash = "sha256:186869d87348d3db6490bbccfd043afa59e124131adaad500a34a3ba5fb4f9db"},
+    {file = "opencolorio-2.4.1.tar.gz", hash = "sha256:a723906e6cfb3c3413061e5536351578e868d65ee258501698d77ab7eb75f57b"},
+]
+
+[[package]]
 name = "packaging"
 version = "24.2"
 description = "Core utilities for Python packages"
@@ -196,7 +243,19 @@ files = [
     {file = "tomli-2.2.1.tar.gz", hash = "sha256:cd45e1dc79c835ce60f7404ec8119f2eb06d38b1deba146f07ced3bbc44505ff"},
 ]
 
+[[package]]
+name = "types-opencolorio"
+version = "2.2.1.2"
+description = "python stubs for PyOpenColorIO"
+optional = false
+python-versions = "*"
+groups = ["dev"]
+files = [
+    {file = "types_opencolorio-2.2.1.2-py2.py3-none-any.whl", hash = "sha256:7897382f31d2cf25eca63d28e2449f7821160ae1be8160006abec636829879cc"},
+    {file = "types_opencolorio-2.2.1.2.tar.gz", hash = "sha256:3a915d81eb51fcd98ff83f91d41945e52b86f2c605a2b9b421a54c7f898a47fd"},
+]
+
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.10"
-content-hash = "71cbf7d069376ae96a48d120c298927295ca560f8a961ab41ad3419b2808ff63"
+content-hash = "635759df697ffe7aa0c48e80eab345c8e15475e58c2a04a99409392c6f72eb55"
