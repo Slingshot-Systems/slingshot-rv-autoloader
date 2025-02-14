@@ -16,6 +16,8 @@ ruff = "^0.9.5"
 pytest = "^8.3.4"
 pyside2 = "^5.15.2.1"
 types-opencolorio = "^2.2.1.2"
+rich = "^13.9.4"
+poethepoet = "^0.32.2"
 
 [tool.ruff]
 extend-exclude = ["rv"]
