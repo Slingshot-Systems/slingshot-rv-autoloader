@@ -421,7 +421,8 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
         _look_pipe_node_summary = [
             f"{commands.nodeType(node)}: {node}" for node in _look_pipe_nodes
         ]
-        logger.debug(f"{look_pipe}: {','.join(_look_pipe_node_summary)}")
+        _look_pipe_summary = ",\n".join(_look_pipe_node_summary)
+        logger.debug(f"{look_pipe}: {_look_pipe_summary}")
 
     def _add_look_cdl(self, source_path: Path, look_pipe: str):
         if not self.config.color.look_cdl:
