@@ -1,8 +1,11 @@
 from pathlib import Path
 
 import pytest
+
 from slingshot_autoloader import SlingshotAutoLoaderMode
 from slingshot_autoloader_config import AutoloaderConfig, AutoloadMainConfig
+
+pytestmark = pytest.mark.usefixtures("monkeypatch_ocio_config_path")
 
 
 @pytest.mark.parametrize(

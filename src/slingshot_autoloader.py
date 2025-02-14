@@ -10,12 +10,15 @@ from queue import Queue
 from string import Template
 from typing import TYPE_CHECKING, Callable
 
+import PyOpenColorIO as OCIO
+
 from rv import commands, extra_commands, rvtypes
 from rv_menu_schema import MenuItem
-from slingshot_autoloader_config import get_config_path, read_settings
+from slingshot_autoloader_config import get_config_path, get_ocio_config, read_settings
 
 if TYPE_CHECKING:
     from rv_schemas.event import Event
+    from rv_schemas.ocio import OCIOProperties
 
 logging.basicConfig()
 logger = logging.getLogger("SlingshotAutoLoader")
@@ -48,6 +51,8 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
         super().__init__()
 
         self.config = read_settings()
+
+        OCIO.SetCurrentConfig(get_ocio_config(self.config))
 
         self._settings.load_plates_enabled = commands.readSettings(
             self._settings.RV_SETTINGS_GROUP,
@@ -140,7 +145,15 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
                                 stateHook=lambda: commands.DisabledMenuState,
                             ).tuple(),
                             MenuItem(
-                                label=f"    File LUT: {self.config.color.file_lut}",
+                                label=f"    MOV Colorspace: {self.config.color.mov_colorspace}",
+                                stateHook=lambda: commands.DisabledMenuState,
+                            ).tuple(),
+                            MenuItem(
+                                label=f"    EXR Colorspace: {self.config.color.exr_colorspace}",
+                                stateHook=lambda: commands.DisabledMenuState,
+                            ).tuple(),
+                            MenuItem(
+                                label=f"    Working Colorspace: {self.config.color.working_space}",
                                 stateHook=lambda: commands.DisabledMenuState,
                             ).tuple(),
                             MenuItem(

@@ -47,12 +47,16 @@ version_regex = _(?P<version>v\d+)
 
 ; settings for LUT/CDL auto loading
 [color]
-; The file LUT, which is applied first.
-; This can be one of three things:
-; - An aboslute path to a LUT (e.g. /Path/To/Lut.cube)
-; - A path relative to the source media to a LUT, with wildcard support (e.g. ../*.cube)
-; - The name of an RV node, as available in the "New Node by Type" menu. (e.g. LinearToAlexaLogC)
-;file_lut = /Path/to/Show_LUT.cube
+; The colorspace used to linearize MOV files (sRGB, Rec709, or Linear)
+mov_colorspace = Rec709
+
+; The colorspace used to linearize DPX/EXRs
+; This can be any valid colorspace in the ACES v1.3 OCIO spec
+exr_colorspace = Linear ARRI Wide Gamut 4
+
+; The colorspace used to apply the LUT/CDL.
+; This can be any valid colorspace in the ACES v1.3 OCIO spec
+working_space = ARRI LogC4
 
 ; The look CDL, which is applied second.
 ; This can be one of two things:
