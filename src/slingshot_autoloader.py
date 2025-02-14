@@ -347,42 +347,56 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
             commands.getStringProperty(f"{file_source}.media.movie", 0, 1000)[0]
         )
 
-        if source_path.suffix.lower() not in (".dpx", ".exr"):
-            return
+        if source_path.suffix.lower() in {
+            ".mov",
+        }:
+            self._setup_mov_linearize_node(source_group)
+        elif source_path.suffix.lower() in {".dpx", ".exr"}:
+            self._setup_exr_linearize_node(source_group)
+            self._add_look_luts(source_group, source_path)
 
-        self._add_file_lut(source_group, source_path)
-        self._add_look_luts(source_group, source_path)
+    def _setup_mov_linearize_node(self, source_group: str):
+        """Sets Color -> File Nonlinear to Linear Conversion"""
+        linPipeNode = extra_commands.nodesInGroupOfType(
+            source_group, "RVLinearizePipelineGroup"
+        )[0]
+        linNode = extra_commands.nodesInGroupOfType(linPipeNode, "RVLinearize")[0]
 
-    def _add_file_lut(self, source_group: str, source_path: Path):
-        if not self.config.color.file_lut:
-            return
+        sRGB = 0
+        logT = 0
+        r709 = 0
 
-        # decide if it's a path or a node name
-        if any(v in self.config.color.file_lut for v in (".", "*", "\\", "/")):
-            # it's a LUT path
-            if not (
-                lut_path := self._find_file(source_path, self.config.color.file_lut)
-            ):
-                logger.warning("Can't load file LUT")
-                return
+        transfer_function = self.config.color.mov_colorspace
 
-            logger.info(f"Loading File LUT {lut_path}")
-            commands.readLUT(str(lut_path), "#RVLinearize", True)
+        if transfer_function == "sRGB":
+            sRGB = 1
+        elif transfer_function == "Rec709":
+            r709 = 1
+        elif transfer_function != "Linear":
+            raise ValueError(f"Unknown transfer function: {transfer_function}")
 
-        else:
-            # it's a node name
-            file_pipe = extra_commands.nodesInGroupOfType(
-                source_group, "RVLinearizePipelineGroup"
-            )[0]
-            # add node to file pipeline
-            logger.info(
-                f"Adding {self.config.color.file_lut} Node to Linearize Pipeline"
-            )
-            commands.setStringProperty(
-                f"{file_pipe}.pipeline.nodes",
-                ["RVLinearize", self.config.color.file_lut],
-                True,
-            )
+        commands.setIntProperty(f"{linNode}.color.sRGB2linear", [sRGB], True)
+        commands.setIntProperty(f"{linNode}.color.logtype", [logT], True)
+        commands.setIntProperty(f"{linNode}.color.Rec709ToLinear", [r709], True)
+
+    def _setup_exr_linearize_node(self, source_group: str):
+        file_pipe = extra_commands.nodesInGroupOfType(
+            source_group, "RVLinearizePipelineGroup"
+        )[0]
+        logger.debug(
+            f"Adding Linearize EXR OCIO node - in colorspace: {self.config.color.exr_colorspace},"
+            f" out colorspace: {self.config.color.working_space}",
+        )
+        commands.setStringProperty(f"{file_pipe}.pipeline.nodes", ["OCIOFile"], True)
+        ocio_node = extra_commands.nodesInGroupOfType(file_pipe, "OCIOFile")[0]
+        applyOCIOProps(
+            ocio_node,
+            {
+                "ocio.function": "color",
+                "ocio.inColorSpace": self.config.color.exr_colorspace,
+                "ocio_color.outColorSpace": self.config.color.working_space,
+            },
+        )
 
     def _add_look_luts(self, source_group: str, source_path: Path):
         look_pipe = extra_commands.nodesInGroupOfType(
@@ -432,47 +446,6 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
         look_node = extra_commands.nodesInGroupOfType(look_pipe, "RVLookLUT")[0]
         logger.info(f"Loading look LUT: {lut_path}")
         commands.readLUT(str(lut_path), look_node, True)
-
-        # elif (nodeType == "RVLookPipelineGroup"):
-        #     # If our config has a Look named shot_specific_look and uses the
-        #     # environment/context variable "$SHOT" to locate any required
-        #     # files on disk, then this is what that would likely look like
-        #     result = [
-        #         {"nodeType"   : "OCIOLook",
-        #         "context"    : {},
-        #         "properties" : {
-        #             "ocio.function"     : "look",
-        #             "ocio.inColorSpace" : OCIO.Constants.ROLE_SCENE_LINEAR,
-        #             "ocio_look.look"    : "role_color_my_look"}}]
-
-        # linPipeNode = extra_commands.nodesInGroupOfType(
-        #     source_group, "RVLinearizePipelineGroup"
-        # )[0]
-        # linNode = extra_commands.nodesInGroupOfType(linPipeNode, "RVLinearize")[0]
-        # ICCNode = extra_commands.nodesInGroupOfType(
-        #     linPipeNode, "ICCLinearizeTransform"
-        # )[0]
-        # lensNode = extra_commands.nodesInGroupOfType(linPipeNode, "RVLensWarp")[0]
-        # fmtNode = extra_commands.nodesInGroupOfType(source_group, "RVFormat")[0]
-        # tformNode = extra_commands.nodesInGroupOfType(source_group, "RVTransform2D")[0]
-        # lookPipeNode = extra_commands.nodesInGroupOfType(
-        #     source_group, "RVLookPipelineGroup"
-        # )[0]
-        # lookNode = extra_commands.nodesInGroupOfType(lookPipeNode, "RVLookLUT")[0]
-        # typeName = commands.nodeType(file_source)
-
-        # mInfo = commands.sourceMediaInfo(file_source, None)
-        # try:
-        #     srcAttrs = commands.sourceAttributes(file_source, source_path.name)
-        #     srcData = commands.sourceDataAttributes(file_source, source_path.name)
-        # except Exception:
-        #     return
-
-        # if srcAttrs is None:
-        #     print(
-        #         f"ERROR: SourceSetup: source {file_source}/{source_path.name} has no attributes"
-        #     )
-        #     return
 
     def after_progressive_loading(self, event: "Event"):
         logger.debug(f"after_progressive_loading: {event.contents()}")
@@ -527,3 +500,17 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
 
 def createMode():
     return SlingshotAutoLoaderMode()
+
+
+def applyOCIOProps(node: str, properties: "OCIOProperties"):
+    for prop, value in properties.items():
+        if isinstance(value, str):
+            commands.setStringProperty(f"{node}.{prop}", [value], True)
+        elif isinstance(value, int):
+            commands.setIntProperty(f"{node}.{prop}", [value], True)
+        elif isinstance(value, float):
+            commands.setFloatProperty(f"{node}.{prop}", [value], True)
+        else:
+            raise ValueError(
+                f"Cannot set property {prop} with value of type {type(value)}"
+            )
