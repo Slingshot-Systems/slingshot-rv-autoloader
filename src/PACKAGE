@@ -1,9 +1,9 @@
 package: Slingshot Auto Loader
 author: Slingshot Systems Inc.
 organization: Slingshot Systems Inc.
-version: 1.1
+version: 1.2
 requires: ""
-rv: 4.0.7
+rv: 2024.1
 openrv: 1.0.0
 optional: true
 
@@ -14,7 +14,13 @@ modes:
     event: ""
     load: immediate
 
+files:
+  - file: ocio/studio-config-v2.1.0_aces-v1.3_ocio-v2.2.ocio
+    location: SupportFiles/$PACKAGE/ocio
+
 description: |
   <h2>Slingshot Auto Loader</h2>
   <p>This is a package that automatically loads plates, v000s, luts, and/or CDLs from designated relative paths.</p>
+  <br>
+  <p>Copyright 2025 Slingshot Systems Inc</p>
   <a href="www.slingshotsystems.io">www.slingshotsystems.io</a>

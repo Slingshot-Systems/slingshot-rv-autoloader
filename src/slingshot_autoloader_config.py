@@ -1,6 +1,17 @@
+import logging
+import os
 from configparser import ConfigParser
 from dataclasses import asdict, dataclass, field, is_dataclass
 from pathlib import Path
+
+import PyOpenColorIO as OCIO
+
+logger = logging.getLogger(__name__)
+logger = logging.getLogger("SlingshotAutoLoader")
+
+SUPPORT_FILES_PATH = (
+    Path(__file__).parent.parent / "SupportFiles" / "slingshot_autoloader"
+)
 
 
 @dataclass(frozen=True)
@@ -16,9 +27,11 @@ class AutoloadPlatesConfig:
     plate_first_frame_in_file: int | None = None
 
 
-@dataclass(frozen=True)
+@dataclass
 class AutoloadColorConfig:
-    file_lut: str | None = None
+    mov_colorspace: str = "Rec709"
+    exr_colorspace: str = "ACES2065-1"
+    working_space: str = "ACEScc"
     look_cdl: str | None = None
     look_lut: str | None = None
 
@@ -59,7 +72,12 @@ def read_settings() -> AutoloaderConfig:
         if _config.has_section("other")
         else {},
         color=AutoloadColorConfig(
-            file_lut=_config["color"].get("file_lut"),
+            mov_colorspace=_config["color"].get("mov_colorspace")
+            or AutoloadColorConfig.__dataclass_fields__["mov_colorspace"].default,
+            exr_colorspace=_config["color"].get("exr_colorspace")
+            or AutoloadColorConfig.__dataclass_fields__["exr_colorspace"].default,
+            working_space=_config["color"].get("working_space")
+            or AutoloadColorConfig.__dataclass_fields__["working_space"].default,
             look_cdl=_config["color"].get("look_cdl"),
             look_lut=_config["color"].get("look_lut"),
         )
@@ -97,4 +115,34 @@ def get_or_create_default_config() -> ConfigParser:
         return config
 
     config.read(config_file)
+    return config
+
+
+def get_ocio_config(autoloader_config: AutoloaderConfig) -> OCIO.Config:
+    ocio_config_path = (
+        SUPPORT_FILES_PATH / "ocio/studio-config-v2.1.0_aces-v1.3_ocio-v2.2.ocio"
+    )
+
+    if not ocio_config_path.exists():
+        raise Exception(
+            f"OCIO config file not found at path: {ocio_config_path.as_posix()}"
+        )
+
+    # we don't use this at all, but it's required to suppress the "ERROR: OCIO environment variable not set" error when creating an ocio node
+    # https://github.com/AcademySoftwareFoundation/OpenRV/blob/d96b2a8c93525da39bb2dc721690f214d3ea9181/src/lib/ip/OCIONodes/OCIOIPNode.cpp#L231
+    os.environ["OCIO"] = ocio_config_path.as_posix()
+
+    logger.debug(f"Loading OCIO config: {ocio_config_path.as_posix()}")
+    config_module = OCIO.Config()
+    config = config_module.CreateFromFile(str(ocio_config_path))
+
+    # validate configuration
+    for _field in ["working_space", "exr_colorspace"]:
+        colorspace = getattr(autoloader_config.color, _field)
+        if not (validated_colorspace := config.parseColorSpaceFromString(colorspace)):
+            raise Exception(
+                f"Configuration error: Could not find color space: {colorspace}"
+            )
+        setattr(autoloader_config.color, _field, validated_colorspace)
+
     return config

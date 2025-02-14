@@ -1,13 +1,18 @@
+import os
+import re
 from configparser import ConfigParser
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
+
+import slingshot_autoloader_config
 from slingshot_autoloader_config import (
     AutoloadColorConfig,
     AutoloaderConfig,
     AutoloadMainConfig,
     AutoloadPlatesConfig,
+    get_ocio_config,
     get_or_create_default_config,
     read_settings,
 )
@@ -33,7 +38,9 @@ from slingshot_autoloader_config import (
                     "prores": r"./*${version}_prores.mov",
                 },
                 "color": {
-                    "file_lut": "/path/to/file_lut",
+                    "mov_colorspace": "Rec709",
+                    "exr_colorspace": "ACES2065-1",
+                    "working_space": "ACEScc",
                     "look_cdl": "/path/to/look_cdl",
                     "look_lut": "/path/to/look_lut",
                 },
@@ -52,7 +59,9 @@ from slingshot_autoloader_config import (
                     "prores": r"./*${version}_prores.mov",
                 },
                 color=AutoloadColorConfig(
-                    file_lut="/path/to/file_lut",
+                    mov_colorspace="Rec709",
+                    exr_colorspace="ACES2065-1",
+                    working_space="ACEScc",
                     look_cdl="/path/to/look_cdl",
                     look_lut="/path/to/look_lut",
                 ),
@@ -75,7 +84,6 @@ from slingshot_autoloader_config import (
                     "prores": None,
                 },
                 "color": {
-                    "file_lut": None,
                     "look_cdl": None,
                     "look_lut": None,
                 },
@@ -89,11 +97,7 @@ from slingshot_autoloader_config import (
                     plate_cut_in_frame=None,
                 ),
                 other={},
-                color=AutoloadColorConfig(
-                    file_lut=None,
-                    look_cdl=None,
-                    look_lut=None,
-                ),
+                color=AutoloadColorConfig(look_cdl=None, look_lut=None),
             ),
             id="all_none_values",
         ),
@@ -119,14 +123,18 @@ from slingshot_autoloader_config import (
         pytest.param(
             {
                 "color": {
-                    "file_lut": "/path/to/file_lut",
+                    "mov_colorspace": "Rec709",
+                    "exr_colorspace": "colorspace-1",
+                    "working_space": "colorspace-2",
                     "look_cdl": "/path/to/look_cdl",
                     "look_lut": "/path/to/look_lut",
                 },
             },
             AutoloaderConfig(
                 color=AutoloadColorConfig(
-                    file_lut="/path/to/file_lut",
+                    mov_colorspace="Rec709",
+                    exr_colorspace="colorspace-1",
+                    working_space="colorspace-2",
                     look_cdl="/path/to/look_cdl",
                     look_lut="/path/to/look_lut",
                 )
@@ -143,9 +151,7 @@ from slingshot_autoloader_config import (
                 "plates": {
                     "plate_mov_path": "/path/to/plate_mov",
                 },
-                "color": {
-                    "file_lut": "/path/to/file_lut",
-                },
+                "color": {},
             },
             AutoloaderConfig(
                 plates=AutoloadPlatesConfig(
@@ -155,7 +161,11 @@ from slingshot_autoloader_config import (
                     plate_cut_in_frame=None,
                 ),
                 color=AutoloadColorConfig(
-                    file_lut="/path/to/file_lut",
+                    mov_colorspace="Rec709",
+                    exr_colorspace="ACES2065-1",
+                    working_space="ACEScc",
+                    look_cdl=None,
+                    look_lut=None,
                 ),
             ),
             id="edge_case_missing_some_keys",
@@ -243,3 +253,113 @@ def test_get_or_create_default_config(
                     assert config[section][key] == getattr(
                         getattr(default_config, section), key
                     )
+
+
+OCIO_CONFIG_PATH = (
+    Path(__file__).parent.parent
+    / "src/ocio/studio-config-v2.1.0_aces-v1.3_ocio-v2.2.ocio"
+)
+
+
+@pytest.mark.parametrize(
+    "working_space, exr_colorspace, expected_working_space, expected_exr_colorspace",
+    [
+        pytest.param(
+            "lin_srgb",
+            "lin_ap1",
+            "Linear Rec.709 (sRGB)",
+            "ACEScg",
+            id="happy_path_lin_srgb",
+        ),
+        pytest.param(
+            "ACES - ACES2065-1",
+            "ACEScc",
+            "ACES2065-1",
+            "ACEScc",
+            id="happy_path_aces",
+        ),
+        pytest.param(
+            '"ARRI LogC4"',
+            '"Linear ARRI Wide Gamut 4"',
+            "ARRI LogC4",
+            "Linear ARRI Wide Gamut 4",
+            id="happy_path_extra_quotes",
+        ),
+    ],
+)
+@pytest.mark.usefixtures("monkeypatch_ocio_config_path")
+def test_get_ocio_config_happy_path(
+    working_space: str,
+    exr_colorspace: str,
+    expected_working_space: str,
+    expected_exr_colorspace: str,
+):
+    autoloader_config = AutoloaderConfig(
+        color=AutoloadColorConfig(
+            working_space=working_space, exr_colorspace=exr_colorspace
+        )
+    )
+
+    # Act
+    config = get_ocio_config(autoloader_config)
+    assert os.environ["OCIO"] == OCIO_CONFIG_PATH.as_posix()
+
+    # Assert
+    assert autoloader_config.color.working_space == expected_working_space
+    assert autoloader_config.color.exr_colorspace == expected_exr_colorspace
+
+
+@pytest.mark.usefixtures("monkeypatch_ocio_config_path")
+@pytest.mark.parametrize(
+    "working_space, exr_colorspace, expected_exception",
+    [
+        pytest.param(
+            "invalid_working_space", "lin_srgb", Exception, id="invalid_working_space"
+        ),
+        pytest.param(
+            "lin_srgb", "invalid_exr_colorspace", Exception, id="invalid_exr_colorspace"
+        ),
+        pytest.param(
+            "invalid_working_space",
+            "invalid_exr_colorspace",
+            Exception,
+            id="invalid_both",
+        ),
+    ],
+)
+@pytest.mark.usefixtures("monkeypatch_ocio_config_path")
+def test_get_ocio_config_invalid_colorspace(
+    working_space: str,
+    exr_colorspace: str,
+    expected_exception: type[Exception],
+):
+    autoloader_config = AutoloaderConfig(
+        color=AutoloadColorConfig(
+            working_space=working_space, exr_colorspace=exr_colorspace
+        )
+    )
+
+    with pytest.raises(
+        expected_exception,
+        match=re.escape("Configuration error: Could not find color space:"),
+    ):
+        get_ocio_config(autoloader_config)
+
+
+@patch("slingshot_autoloader_config.Path.exists", return_value=False)
+def test_get_ocio_config_file_not_found(mock_exists: Mock):
+    ocio_path = (
+        Path(__file__).parent.parent
+        / "SupportFiles"
+        / "slingshot_autoloader"
+        / "ocio/studio-config-v2.1.0_aces-v1.3_ocio-v2.2.ocio"
+    )
+    autoloader_config = AutoloaderConfig()
+
+    # Act & Assert
+    with pytest.raises(Exception) as exc_info:
+        get_ocio_config(autoloader_config)
+
+    assert str(exc_info.value) == (
+        f"OCIO config file not found at path: {ocio_path.as_posix()}"
+    )

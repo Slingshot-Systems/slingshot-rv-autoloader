@@ -6,7 +6,7 @@ OCIOProperties = TypedDict(
     "OCIOProperties",
     {
         "ocio.function": str,  # One of “color”, “look”, or “display”
-        "ocio.lut": list[float],  # Used internally to store the OCIO generated 3D LUT
+        # "ocio.lut": list[float],  # Used internally to store the OCIO generated 3D LUT
         "ocio.active": int,  # Activates/deactivates the OCIO node
         "ocio.lut3DSize": int,  # The desired size of the OCIO generated 3D LUT (default=32)
         "ocio.inColorSpace": str,  # The OCIO name of the input color space
@@ -15,8 +15,9 @@ OCIOProperties = TypedDict(
         "ocio_look.direction": int,  # 0=forward, 1=inverse
         "ocio_display.display": str,  # OCIO display name when ocio.function == “display”
         "ocio_display.view": str,  # OCIO view name when ocio.function == “display”
-        "ocio_context": dict[
-            str, str
-        ],  # String properties in this component become OCIO config name/value pairs
+        # "ocio_context": dict[
+        #     str, str
+        # ],  # String properties in this component become OCIO config name/value pairs
     },
+    total=False,
 )
