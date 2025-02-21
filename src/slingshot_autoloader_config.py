@@ -99,6 +99,9 @@ def get_or_create_default_config() -> ConfigParser:
     config = ConfigParser(allow_no_value=True)
     config.optionxform = str  # don't lowercase keys # type: ignore
     if not config_file.exists():
+        logger.warning(
+            f"Config file not found at path: {config_file.as_posix()}, default settings will be used"
+        )
         for field, value in asdict(AutoloaderConfig()).items():
             if is_dataclass(value) and not isinstance(value, type):
                 _value = asdict(value)
