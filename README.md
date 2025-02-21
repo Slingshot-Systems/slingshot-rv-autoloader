@@ -10,9 +10,9 @@ When a plugin in loaded and installed in RV, you can directly edit or replace py
 ### Testing
 Testing is difficult outside of the RV environment, but you can run the few tests we have using `pytest`:
 
-"""shell
+```shell
 poetry run pytest ./tests/
-"""
+```
 
 ---
 
