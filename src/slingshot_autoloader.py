@@ -52,8 +52,6 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
 
         self.config = read_settings()
 
-        OCIO.SetCurrentConfig(get_ocio_config(self.config))
-
         self._settings.load_plates_enabled = commands.readSettings(
             self._settings.RV_SETTINGS_GROUP,
             "load_plates_enabled",
@@ -74,6 +72,9 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
         )
 
         logger.setLevel(logging.DEBUG if self._settings.debug else logging.INFO)
+
+        if self._settings.load_luts_enabled:
+            OCIO.SetCurrentConfig(get_ocio_config(self.config))
 
         init_bindings = [
             (
