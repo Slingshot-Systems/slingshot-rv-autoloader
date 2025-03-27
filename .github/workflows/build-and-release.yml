@@ -6,6 +6,7 @@ on:
       version:
         description: "Release version number"
         required: true
+#   pull_request: # only used for testing the action
 
 permissions:
   contents: write
@@ -16,6 +17,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        # with:
+        #   ref: ${{ github.head_ref }} # only required for git push to pull requests
 
       - name: Set up python
         id: setup-python
