@@ -1,6 +1,7 @@
 import os
 import re
 from configparser import ConfigParser
+from json import load
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -12,9 +13,10 @@ from slingshot_autoloader_config import (
     AutoloaderConfig,
     AutoloadMainConfig,
     AutoloadPlatesConfig,
+    _create_default_config,
+    _read_config,
     get_ocio_config,
-    get_or_create_default_config,
-    read_settings,
+    load_or_create_config,
 )
 
 
@@ -172,14 +174,17 @@ from slingshot_autoloader_config import (
         ),
     ],
 )
-def test_read_settings(config_data, expected_settings):
+@patch("slingshot_autoloader_config.Path.exists", return_value=True)
+def test_load_or_create_config_exists(
+    mock_exists: Mock, config_data, expected_settings
+):
     # Arrange
     _config = ConfigParser(allow_no_value=True)
     _config.optionxform = str  # type: ignore
     _config.read_dict(config_data)
 
     with patch(
-        "slingshot_autoloader_config.get_or_create_default_config",
+        "slingshot_autoloader_config._read_config",
         return_value=_config,
     ):
         # Act
@@ -187,72 +192,66 @@ def test_read_settings(config_data, expected_settings):
             expected_settings, Exception
         ):
             with pytest.raises(expected_settings):
-                read_settings()
+                load_or_create_config()
         else:
-            result = read_settings()
+            result = load_or_create_config()
 
             # Assert
             assert result == expected_settings
 
 
-@pytest.mark.parametrize(
-    "config_exists, settings, expected_sections",
-    [
-        pytest.param(
-            False,
-            {"section1": {"key1": "value1"}, "sEction2": {"kEy2": "vAlue2"}},
-            ["section1", "sEction2"],
-            id="create_default_config",
-        ),
-        pytest.param(False, {}, [], id="create_empty_default_config"),
-        pytest.param(
-            True,
-            {"sectioN1": {"kEy1": "vAlue1"}},
-            ["sectioN1"],
-            id="read_existing_config",
-        ),
-    ],
-)
-def test_get_or_create_default_config(
-    tmp_path: Path,
-    config_exists: bool,
-    settings: dict[str, dict[str, str]],
-    expected_sections: list[str],
+@patch("slingshot_autoloader_config.Path.exists", return_value=False)
+def test_load_or_create_config_does_not_exist(mock_exists: Mock):
+    config = load_or_create_config()
+    assert config == AutoloaderConfig()
+
+
+@patch("slingshot_autoloader_config.get_config_path")
+def test_load_or_create_config_invalid_config_file(
+    mock_get_config_path: Mock, tmp_path: Path
 ):
-    # Arrange
+    config = tmp_path / "invalid_config.cfg"
+    config.write_text("totally invalid file")
+    mock_get_config_path.return_value = config
+
+    assert load_or_create_config() == AutoloaderConfig()
+
+
+def test__create_default_config(tmp_path: Path):
+    config_path = tmp_path / "new_config.cfg"
+    config = _create_default_config(config_path)
+    print(config.__dict__)
+
+    assert config_path.is_file()
+    default_config = AutoloaderConfig()
+    for section in config.sections():
+        for key in config[section]:
+            assert config[section][key] == getattr(
+                getattr(default_config, section), key
+            )
+
+
+def test__read_config(tmp_path: Path):
     config_file = tmp_path / "test_config.ini"
 
-    if config_exists:
-        # Create an actual .ini file with the provided settings
-        config = ConfigParser()
-        config.optionxform = str  # type: ignore
-        for section, keys in settings.items():
-            config[section] = keys
+    # Create an .ini file with the provided settings
+    settings = {"sectioN1": {"kEy1": "vAlue1"}}
+    config = ConfigParser()
+    config.optionxform = str  # type: ignore
+    for section, keys in settings.items():
+        config[section] = keys
 
-        with config_file.open("w") as f:
-            config.write(f)
+    with config_file.open("w") as f:
+        config.write(f)
 
-    with patch("slingshot_autoloader_config.get_config_path", return_value=config_file):
-        config = get_or_create_default_config()
-        print(config.__dict__)
-
-        # Assert
-        if config_exists:
-            # Check if default config was created
-            for section, keys in settings.items():
-                assert config.has_section(section)
-                for key, value in keys.items():
-                    assert config.get(section, key) == value
-                for key, value in config[section].items():
-                    assert key in keys
-        else:
-            # Check if existing config was read
-            default_config = AutoloaderConfig()
-            for section in config.sections():
-                for key in config[section]:
-                    assert config[section][key] == getattr(
-                        getattr(default_config, section), key
-                    )
+    # Read and verify settings from the .ini file
+    disk_config = _read_config(config_file)
+    for section, keys in settings.items():
+        assert disk_config.has_section(section)
+        for key, value in keys.items():
+            assert disk_config.get(section, key) == value
+        for key, value in disk_config[section].items():
+            assert key in keys
 
 
 OCIO_CONFIG_PATH = (
@@ -355,6 +354,7 @@ def test_get_ocio_config_file_not_found(mock_exists: Mock):
         / "ocio/studio-config-v2.1.0_aces-v1.3_ocio-v2.2.ocio"
     )
     autoloader_config = AutoloaderConfig()
+    del os.environ["OCIO"]
 
     # Act & Assert
     with pytest.raises(Exception) as exc_info:

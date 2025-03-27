@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 from configparser import ConfigParser
 from dataclasses import asdict, dataclass, field, is_dataclass
 from pathlib import Path
@@ -44,44 +45,66 @@ class AutoloaderConfig:
     color: AutoloadColorConfig = AutoloadColorConfig()
 
 
-def read_settings() -> AutoloaderConfig:
-    _config = get_or_create_default_config()
+def _create_default_config(path: Path) -> ConfigParser:
+    """Creates a default config file on the disk."""
+    config = ConfigParser(allow_no_value=True)
+    for datafield, value in asdict(AutoloaderConfig()).items():
+        if is_dataclass(value) and not isinstance(value, type):
+            _value = asdict(value)
+        elif isinstance(value, dict):
+            _value = value
+        else:
+            _value = {}
 
+        config[datafield] = _value
+
+    with open(path, "w") as f:
+        config.write(f)
+
+    return config
+
+
+def _read_config(path: Path) -> ConfigParser:
+    config = ConfigParser(allow_no_value=True)
+    config.optionxform = str  # don't lowercase keys # type: ignore
+    config.read(path)
+    return config
+
+
+def _convert_configparser_to_config(config: ConfigParser) -> AutoloaderConfig:
     return AutoloaderConfig(
         main=AutoloadMainConfig(
-            version_regex=_config["main"].get("version_regex")
+            version_regex=config["main"].get("version_regex")
             or AutoloadMainConfig.__dataclass_fields__["version_regex"].default
         )
-        if _config.has_section("main")
+        if config.has_section("main")
         else AutoloadMainConfig(),
         plates=AutoloadPlatesConfig(
-            plate_mov_path=_config["plates"].get("plate_mov_path"),
-            plate_frames_path=_config["plates"].get("plate_frames_path"),
-            plate_first_frame_in_file=int(
-                _config["plates"]["plate_first_frame_in_file"]
-            )
-            if _config["plates"].get("plate_first_frame_in_file")
+            plate_mov_path=config["plates"].get("plate_mov_path"),
+            plate_frames_path=config["plates"].get("plate_frames_path"),
+            plate_first_frame_in_file=int(config["plates"]["plate_first_frame_in_file"])
+            if config["plates"].get("plate_first_frame_in_file")
             else None,
-            plate_cut_in_frame=int(_config["plates"]["plate_cut_in_frame"])
-            if _config["plates"].get("plate_cut_in_frame")
+            plate_cut_in_frame=int(config["plates"]["plate_cut_in_frame"])
+            if config["plates"].get("plate_cut_in_frame")
             else None,
         )
-        if _config.has_section("plates")
+        if config.has_section("plates")
         else AutoloadPlatesConfig(),
-        other={k: v for k, v in _config["other"].items() if v}
-        if _config.has_section("other")
+        other={k: v for k, v in config["other"].items() if v}
+        if config.has_section("other")
         else {},
         color=AutoloadColorConfig(
-            mov_colorspace=_config["color"].get("mov_colorspace")
+            mov_colorspace=config["color"].get("mov_colorspace")
             or AutoloadColorConfig.__dataclass_fields__["mov_colorspace"].default,
-            exr_colorspace=_config["color"].get("exr_colorspace")
+            exr_colorspace=config["color"].get("exr_colorspace")
             or AutoloadColorConfig.__dataclass_fields__["exr_colorspace"].default,
-            working_space=_config["color"].get("working_space")
+            working_space=config["color"].get("working_space")
             or AutoloadColorConfig.__dataclass_fields__["working_space"].default,
-            look_cdl=_config["color"].get("look_cdl"),
-            look_lut=_config["color"].get("look_lut"),
+            look_cdl=config["color"].get("look_cdl"),
+            look_lut=config["color"].get("look_lut"),
         )
-        if _config.has_section("color")
+        if config.has_section("color")
         else AutoloadColorConfig(),
     )
 
@@ -92,38 +115,37 @@ def get_config_path() -> Path:
     return Path.home() / ".slingshot_rv_autoloader.cfg"
 
 
-def get_or_create_default_config() -> ConfigParser:
-    """Reads the config file, and creates a default if it doesn't exist."""
-
+def load_or_create_config() -> AutoloaderConfig:
     config_file = get_config_path()
-    config = ConfigParser(allow_no_value=True)
-    config.optionxform = str  # don't lowercase keys # type: ignore
     if not config_file.exists():
         logger.warning(
             f"Config file not found at path: {config_file.as_posix()}, default settings will be used"
         )
-        for field, value in asdict(AutoloaderConfig()).items():
-            if is_dataclass(value) and not isinstance(value, type):
-                _value = asdict(value)
-            elif isinstance(value, dict):
-                _value = value
-            else:
-                _value = {}
+        _config = _create_default_config(config_file)
+    else:
+        try:
+            _config = _read_config(config_file)
+        except Exception as e:
+            logger.warning(f"Error reading config file: {e}")
+            return AutoloaderConfig()
 
-            config[field] = _value
+    return _convert_configparser_to_config(_config)
 
-        with open(config_file, "w") as f:
-            config.write(f)
 
-        return config
-
-    config.read(config_file)
+def load_config_from_file(path: Path) -> AutoloaderConfig:
+    config = _convert_configparser_to_config(_read_config(path))
+    dest_path = get_config_path()
+    logger.debug(f"Copying config file {path} to {dest_path}")
+    shutil.copy(path, dest_path)
     return config
 
 
 def get_ocio_config(autoloader_config: AutoloaderConfig) -> OCIO.Config:
     if os.environ.get("OCIO"):
         ocio_config_path = Path(os.environ["OCIO"])
+        logger.debug(
+            f"Using OCIO config from environment variable: {ocio_config_path.as_posix()}"
+        )
     else:
         ocio_config_path = (
             SUPPORT_FILES_PATH / "ocio/studio-config-v2.1.0_aces-v1.3_ocio-v2.2.ocio"

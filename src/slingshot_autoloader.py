@@ -14,7 +14,12 @@ import PyOpenColorIO as OCIO
 
 from rv import commands, extra_commands, rvtypes
 from rv_menu_schema import MenuItem
-from slingshot_autoloader_config import get_config_path, get_ocio_config, read_settings
+from slingshot_autoloader_config import (
+    get_config_path,
+    get_ocio_config,
+    load_config_from_file,
+    load_or_create_config,
+)
 
 if TYPE_CHECKING:
     from rv_schemas.event import Event
@@ -50,7 +55,7 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
     def __init__(self):
         super().__init__()
 
-        self.config = read_settings()
+        self.config = load_or_create_config()
 
         self._settings.load_plates_enabled = commands.readSettings(
             self._settings.RV_SETTINGS_GROUP,
