@@ -122,18 +122,21 @@ def get_or_create_default_config() -> ConfigParser:
 
 
 def get_ocio_config(autoloader_config: AutoloaderConfig) -> OCIO.Config:
-    ocio_config_path = (
-        SUPPORT_FILES_PATH / "ocio/studio-config-v2.1.0_aces-v1.3_ocio-v2.2.ocio"
-    )
-
-    if not ocio_config_path.exists():
-        raise Exception(
-            f"OCIO config file not found at path: {ocio_config_path.as_posix()}"
+    if os.environ.get("OCIO"):
+        ocio_config_path = Path(os.environ["OCIO"])
+    else:
+        ocio_config_path = (
+            SUPPORT_FILES_PATH / "ocio/studio-config-v2.1.0_aces-v1.3_ocio-v2.2.ocio"
         )
 
-    # we don't use this at all, but it's required to suppress the "ERROR: OCIO environment variable not set" error when creating an ocio node
-    # https://github.com/AcademySoftwareFoundation/OpenRV/blob/d96b2a8c93525da39bb2dc721690f214d3ea9181/src/lib/ip/OCIONodes/OCIOIPNode.cpp#L231
-    os.environ["OCIO"] = ocio_config_path.as_posix()
+        if not ocio_config_path.exists():
+            raise Exception(
+                f"OCIO config file not found at path: {ocio_config_path.as_posix()}"
+            )
+
+        # we don't use this at all, but it's required to suppress the "ERROR: OCIO environment variable not set" error when creating an ocio node
+        # https://github.com/AcademySoftwareFoundation/OpenRV/blob/d96b2a8c93525da39bb2dc721690f214d3ea9181/src/lib/ip/OCIONodes/OCIOIPNode.cpp#L231
+        os.environ["OCIO"] = ocio_config_path.as_posix()
 
     logger.debug(f"Loading OCIO config: {ocio_config_path.as_posix()}")
     config_module = OCIO.Config()
