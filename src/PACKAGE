@@ -22,5 +22,6 @@ description: |
   <h2>Slingshot Auto Loader</h2>
   <p>This is a package that automatically loads plates, v000s, luts, and/or CDLs from designated relative paths.</p>
   <br>
+  <p>Configuration can be loaded from a provided .cfg file and is stored in %HOME%/.slingshot_rv_autoloader.cfg</p>
   <p>Copyright 2025 Slingshot Systems Inc</p>
   <a href="www.slingshotsystems.io">www.slingshotsystems.io</a>
