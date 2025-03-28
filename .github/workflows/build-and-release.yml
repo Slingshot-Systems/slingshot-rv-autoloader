@@ -58,7 +58,12 @@ jobs:
         run: |
           sed -i "s/version: .*/version: ${{ github.event.inputs.version }}/" src/PACKAGE
 
+      - name: Check if there are any changes
+        id: verify_diff
+        run: |
+          git diff --quiet . || echo "changed=true" >> $GITHUB_OUTPUT
       - name: Commit updated files
+        if: steps.verify_diff.outputs.changed == 'true'
         run: |
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
