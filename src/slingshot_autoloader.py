@@ -226,22 +226,27 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
 
     def load_config_from_file(self, event: "Event"):
         try:
-            if cfg_path := commands.openFileDialog(
+            cfg_path = commands.openFileDialog(
                 True, False, False, "cfg|Autoloader Config Files (*.cfg)", None
-            ):
+            )
+        except Exception:
+            cfg_path = None
+
+        if cfg_path:
+            try:
                 self.config = load_config_from_file(Path(cfg_path[0]))
                 commands.defineModeMenu("slingshot-autoloader", self.give_menu(), True)
-        except Exception as e:
-            logger.warning(f"Error loading config: {e}")
-            commands.alertPanel(
-                True,
-                commands.ErrorAlert,
-                "Error loading config",
-                f"{e}\n\nCheck your config file and try again.",
-                "Okay",
-                None,
-                None,
-            )
+            except Exception as e:
+                logger.warning(f"Error loading config: {e}")
+                commands.alertPanel(
+                    True,
+                    commands.ErrorAlert,
+                    "Error loading config",
+                    f"{e}\n\nCheck your config file and try again.",
+                    "Okay",
+                    None,
+                    None,
+                )
 
     def _find_file(self, source_path: Path, search_path: str) -> Path | None:
         if matches := re.search(
