@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rv-auto-loader"
-version = "0.1"
+version = "1.3"
 description = "Slingshot RV Plate/v000/LUT/CDL Auto Loader"
 authors = ["slingshotvfx <146885925+slingshotvfx@users.noreply.github.com>"]
 license = "Apache-2.0"
