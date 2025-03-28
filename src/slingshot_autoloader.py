@@ -14,7 +14,11 @@ import PyOpenColorIO as OCIO
 
 from rv import commands, extra_commands, rvtypes
 from rv_menu_schema import MenuItem
-from slingshot_autoloader_config import get_config_path, get_ocio_config, read_settings
+from slingshot_autoloader_config import (
+    get_ocio_config,
+    load_config_from_file,
+    load_or_create_config,
+)
 
 if TYPE_CHECKING:
     from rv_schemas.event import Event
@@ -50,9 +54,7 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
     def __init__(self):
         super().__init__()
 
-        self.config = read_settings()
-
-        OCIO.SetCurrentConfig(get_ocio_config(self.config))
+        self.config = load_or_create_config()
 
         self._settings.load_plates_enabled = commands.readSettings(
             self._settings.RV_SETTINGS_GROUP,
@@ -75,6 +77,9 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
 
         logger.setLevel(logging.DEBUG if self._settings.debug else logging.INFO)
 
+        if self._settings.load_luts_enabled:
+            OCIO.SetCurrentConfig(get_ocio_config(self.config))
+
         init_bindings = [
             (
                 "source-group-complete",
@@ -89,7 +94,7 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
         ]
 
         self.init(
-            "rv-auto-loader",
+            "slingshot-autoloader",
             init_bindings,
             None,
             menu=self.give_menu(),
@@ -166,8 +171,8 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
                             ).tuple(),
                             MenuItem("_").tuple(),
                             MenuItem(
-                                label=f"To configure these, edit {get_config_path().name}",
-                                stateHook=lambda: commands.DisabledMenuState,
+                                label="Load config from file...",
+                                actionHook=self.load_config_from_file,
                             ).tuple(),
                         ],
                     ),
@@ -218,6 +223,25 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
                 logger.setLevel(logging.DEBUG if new_setting else logging.INFO)
 
         return _toggle
+
+    def load_config_from_file(self, event: "Event"):
+        try:
+            if cfg_path := commands.openFileDialog(
+                True, False, False, "cfg|Autoloader Config Files (*.cfg)", None
+            ):
+                self.config = load_config_from_file(Path(cfg_path[0]))
+                commands.defineModeMenu("slingshot-autoloader", self.give_menu(), True)
+        except Exception as e:
+            logger.warning(f"Error loading config: {e}")
+            commands.alertPanel(
+                True,
+                commands.ErrorAlert,
+                "Error loading config",
+                f"{e}\n\nCheck your config file and try again.",
+                "Okay",
+                None,
+                None,
+            )
 
     def _find_file(self, source_path: Path, search_path: str) -> Path | None:
         if matches := re.search(

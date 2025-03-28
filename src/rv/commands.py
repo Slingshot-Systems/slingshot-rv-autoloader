@@ -448,8 +448,8 @@ def alertPanel(
     title: str,
     message: str,
     button0: str,
-    button1: str,
-    button2: str,
+    button1: str | None,
+    button2: str | None,
 ) -> int: ...
 
 
