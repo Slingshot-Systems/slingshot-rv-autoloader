@@ -1,5 +1,5 @@
 ; SLINGSHOT AUTOLOADER CONFIG
-; plugin version: 1.2
+; plugin version: 1.4
 
 [main]
 ; the regular expression used to parse the version number from the media filename
