@@ -1,0 +1,13 @@
+{
+  "include": ["src"],
+  "exclude": ["**/__pycache__", "build"],
+  "stubPath": "typings",
+  "typeCheckingMode": "standard",
+  "reportMissingImports": true,
+  "reportMissingModuleSource": false,
+  "reportMissingTypeStubs": false,
+  "pythonVersion": "3.10",
+  "pythonPlatform": "Windows",
+  "extraPaths": ["src"],
+  "useLibraryCodeForTypes": true
+}

@@ -1,13 +1,11 @@
 import os
 import re
 from configparser import ConfigParser
-from json import load
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
 
-import slingshot_autoloader_config
 from slingshot_autoloader_config import (
     AutoloadColorConfig,
     AutoloaderConfig,
@@ -300,7 +298,7 @@ def test_get_ocio_config_happy_path(
     )
 
     # Act
-    config = get_ocio_config(autoloader_config)
+    get_ocio_config(autoloader_config)
     assert os.environ["OCIO"] == OCIO_CONFIG_PATH.as_posix()
 
     # Assert

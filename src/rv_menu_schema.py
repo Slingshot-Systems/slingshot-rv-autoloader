@@ -1,8 +1,11 @@
+# Copyright (C) 2025 Slingshot Systems Inc.
+# SPDX-License-Identifier: Apache-2.0
+
 from dataclasses import dataclass, fields
 from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
-    from .rv_schemas.event import Event
+    from rv.schemas.event import Event
 
 
 @dataclass

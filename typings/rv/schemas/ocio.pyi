@@ -1,3 +1,5 @@
+# Copyright (C) 2024-2025 Slingshot Systems Inc.
+
 from typing import TypedDict
 
 # OCIO Node Properties

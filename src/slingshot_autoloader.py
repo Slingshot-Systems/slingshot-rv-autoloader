@@ -11,8 +11,8 @@ from string import Template
 from typing import TYPE_CHECKING, Callable
 
 import PyOpenColorIO as OCIO
-
 from rv import commands, extra_commands, rvtypes
+
 from rv_menu_schema import MenuItem
 from slingshot_autoloader_config import (
     get_ocio_config,
@@ -21,8 +21,8 @@ from slingshot_autoloader_config import (
 )
 
 if TYPE_CHECKING:
-    from rv_schemas.event import Event
-    from rv_schemas.ocio import OCIOProperties
+    from rv.schemas.event import Event
+    from rv.schemas.ocio import OCIOProperties
 
 logging.basicConfig()
 logger = logging.getLogger("SlingshotAutoLoader")
