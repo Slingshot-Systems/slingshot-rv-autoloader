@@ -6,7 +6,7 @@ on:
       version:
         description: "Release version number"
         required: true
-#   pull_request: # only used for testing the action
+  # pull_request: # only used for testing the action
 
 permissions:
   contents: write
@@ -17,8 +17,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        # with:
-        #   ref: ${{ github.head_ref }} # only required for git push to pull requests
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
       - name: Set up python
         id: setup-python
@@ -26,53 +32,40 @@ jobs:
         with:
           python-version-file: "pyproject.toml"
 
-      - name: cache poetry install
-        uses: actions/cache@v4
-        with:
-          path: ~/.local
-          key: poetry
+      - name: Install the project
+        run: uv sync --locked --all-extras --dev
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-in-project: true
-          virtualenvs-create: true
-
-      - name: cache deps
-        id: cache-deps
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: pydeps-${{ hashFiles('**/poetry.lock') }}
-
-      - run: poetry install --no-interaction --no-root
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-
-      - run: poetry run poe test # run tests. why not?
+      - run: uv run poe test # run tests. why not?
 
       - name: Update Poetry version
         run: |
-          poetry version ${{ github.event.inputs.version }}
+          uv version ${{ github.event.inputs.version }}
 
       - name: Version up PACKAGE file
         run: |
           sed -i "s/version: .*/version: ${{ github.event.inputs.version }}/" src/PACKAGE
+          sed -i "s/version: .*/version: ${{ github.event.inputs.version }}/" slingshot_rv_autoloader.cfg.EXAMPLE
 
       - name: Check if there are any changes
         id: verify_diff
         run: |
           git diff --quiet . || echo "changed=true" >> $GITHUB_OUTPUT
+
       - name: Commit updated files
         if: steps.verify_diff.outputs.changed == 'true'
         run: |
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
-          git add src/PACKAGE pyproject.toml
+          git add src/PACKAGE pyproject.toml slingshot_rv_autoloader.cfg.EXAMPLE
           git commit -m "Bump version to ${{ github.event.inputs.version }}"
-          git push
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git push origin HEAD:${{ github.head_ref }}
+          else
+            git push
+          fi
 
       - name: Build and package
-        run: poetry run python scripts/build.py
+        run: uv run poe build
 
       - name: Create release
         uses: softprops/action-gh-release@v2

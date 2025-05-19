@@ -1,7 +1,11 @@
+# This is a stub module. The actual implementation is provided by RV.
+# Copyright (C) 2024-2025 Slingshot Systems Inc.
+
+# Generated from code Copyright (C) 2023  Autodesk, Inc. All Rights Reserved.
+
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import List, Protocol
-
 
 @dataclass
 class Vec2:
@@ -10,14 +14,12 @@ class Vec2:
     x: float
     y: float
 
-
 class Button(IntEnum):
     """Button states."""
 
     Button1 = 1
     Button2 = 2
     Button3 = 4  # OR'd bitmask for multiple buttons
-
 
 class Modifier(IntEnum):
     """Key modifier states."""
@@ -32,7 +34,6 @@ class Modifier(IntEnum):
     NumLock = 64
     ScrollLock = 128
 
-
 class ContentType(IntEnum):
     """Content types for drag-and-drop events."""
 
@@ -41,7 +42,6 @@ class ContentType(IntEnum):
     FileObject = 2
     URLObject = 3
     TextObject = 4
-
 
 class Event(Protocol):
     """An RV Event object."""

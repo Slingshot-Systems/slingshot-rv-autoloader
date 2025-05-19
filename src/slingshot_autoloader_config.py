@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Slingshot Systems Inc.
+# SPDX-License-Identifier: Apache-2.0
+
 import logging
 import os
 import shutil

@@ -1,38 +1,36 @@
-[tool.poetry]
+[project]
 name = "rv-auto-loader"
-version = "1.3"
+version = "1.4"
 description = "Slingshot RV Plate/v000/LUT/CDL Auto Loader"
-authors = ["slingshotvfx <146885925+slingshotvfx@users.noreply.github.com>"]
-license = "Apache-2.0"
+authors = [
+    { name = "slingshotvfx", email = "146885925+slingshotvfx@users.noreply.github.com" },
+]
+requires-python = ">=3.10,<3.11"
 readme = "README.md"
-package-mode = false
+license = "Apache-2.0"
+dependencies = ["opencolorio>=2.4.1,<3"]
 
-[tool.poetry.dependencies]
-python = "~3.10"
-opencolorio = "^2.4.1"
+[dependency-groups]
+dev = [
+    "ruff>=0.9.5,<0.10",
+    "pytest>=8.3.4,<9",
+    "pyside2>=5.15.2.1,<6",
+    "types-opencolorio>=2.2.1.2,<3",
+    "rich>=13.9.4,<14",
+    "poethepoet>=0.32.2,<0.33",
+]
 
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.9.5"
-pytest = "^8.3.4"
-pyside2 = "^5.15.2.1"
-types-opencolorio = "^2.2.1.2"
-rich = "^13.9.4"
-poethepoet = "^0.32.2"
+[tool.uv]
+package = false
 
-[tool.ruff]
-extend-exclude = ["rv"]
 
 [tool.pytest.ini_options]
 pythonpath = "src"
 addopts = ["--import-mode=importlib"]
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
 [tool.poe.tasks]
-lint = "ruff check --fix src"
-test = "pytest tests"
-format = "ruff format src"
-build = "poetry run python scripts/build.py"
+lint = "uvx ruff check --fix"
+test = "uv run pytest tests"
+format = "uvx ruff format"
+build = "uv run python scripts/build.py"
 release = ["lint", "format", "test", "build"]

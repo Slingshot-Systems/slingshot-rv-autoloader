@@ -1,255 +1,103 @@
-from typing import TYPE_CHECKING, Any, overload
+# This is a stub module. The actual implementation is provided by RV.
 
-if TYPE_CHECKING:
-    from src.rv_schemas.event import Event
+from typing import Any, overload
 
-    from .rvtypes import Mode, State
+from .schemas.event import Event
 
+from .rvtypes import Mode, State
 
 def cprop(name: str, propType: int) -> None: ...
-
-
 def stepForward(n: int) -> None: ...
-
-
 def uiName(innode: str) -> str: ...
-
-
 def stepBackward1() -> None: ...
-
-
 def toggleSync() -> None: ...
-
-
 def numFrames() -> int: ...
-
-
 def centerResizeFit() -> None: ...
-
-
 def sourceFrame(atframe: int, root: str | None = None) -> int: ...
-
-
 def nodesUnderPointer(event: "Event", typeName: str = "") -> list[list[str]]: ...
-
-
 def loadCurrentSourcesChangedFrames() -> None: ...
-
-
 def stepForward10() -> None: ...
-
-
 def stepForward1() -> None: ...
-
-
 def translation() -> list[float]: ...
-
-
 def toggleForwardsBackwards() -> None: ...
-
-
 def associatedNodes(typeName: str, nodeName: str) -> list[str]: ...
-
-
 def togglePlayVerbose(verbose: bool) -> None: ...
-
-
 def isSessionEmpty() -> bool: ...
-
-
 def setDisplayProfilesFromSettings(settings: list[str]) -> None: ...
-
-
 def togglePlayIfNoScrub() -> None: ...
-
-
 def sequenceBoundaries(node: str | None = None) -> list[int]: ...
-
-
 def togglePlay() -> None: ...
-
-
 def displayFeedback(
     text: str, duration: float = 2.0, g: tuple[None, bool] | None = None
 ) -> None: ...
-
-
 def setActiveState() -> None: ...
-
-
 def appendToProp(name: str, value: str) -> None: ...
-
-
 def recordPixelInfo(event: "Event") -> None: ...
-
-
 def setScale(s: float) -> None: ...
-
-
 def toggleMotionScopeFromState(state: "State") -> None: ...
-
-
 def scale() -> float: ...
-
-
 def isPlayingBackwards() -> bool: ...
-
-
 def _print(s: str) -> None: ...
-
-
 def minorModeIsLoaded(nm: str) -> bool: ...
-
-
 def isPlayable() -> bool: ...
-
-
 def isNarrowed() -> bool: ...
-
-
 def nodesInGroupOfType(groupNode: str, typeName: str) -> list[str]: ...
-
-
 def findAnnotatedFrames() -> list[int]: ...
-
-
 def updatePixelInfo(event: "Event") -> None: ...
-
-
 def toggleMotionScope() -> None: ...
-
-
 def toggleRealtime() -> None: ...
-
-
 def cacheUsage() -> tuple[float, float, list[int]]: ...
-
-
 def activateSync() -> None: ...
-
-
 def frameImage() -> None: ...
-
-
 def currentImageAspect() -> float: ...
-
-
 def toggleFullScreen() -> None: ...
-
-
 def existsInProp(name: str, value: str) -> bool: ...
-
-
 def cycleNodeInputs(node: str, forward: bool) -> None: ...
-
-
 def associatedNode(typeName: str, nodeName: str) -> str: ...
-
-
 @overload
 def set(name: str, value: list[int]) -> None: ...
-
-
 @overload
 def set(name: str, value: list[str]) -> None: ...
-
-
 @overload
 def set(name: str, value: int) -> None: ...
-
-
 @overload
 def set(name: str, value: float) -> None: ...
-
-
 @overload
 def set(name: str, value: str) -> None: ...
-
-
 @overload
 def set(name: str, value: list[float]) -> None: ...
-
-
 def set(
     name: str, value: list[int] | list[str] | float | int | str | list[float]
 ) -> None: ...
-
-
 def associatedVideoDevice(displayGroup: str) -> str: ...
-
-
 def deactivatePackageModeEntry(mode: "Mode", modeModuleName: str) -> None: ...
-
-
 def topLevelGroup(innode: str) -> str: ...
-
-
 def toggleFilter() -> None: ...
-
-
 def isViewNode(name: str) -> bool: ...
-
-
 def activatePackageModeEntry(mode: "Mode", modeModuleName: str) -> None: ...
-
-
 def stepBackward(n: int) -> None: ...
-
-
 def setInactiveState() -> None: ...
-
-
 def isPlayingForwards() -> bool: ...
-
-
 def stepForward100() -> None: ...
-
-
 def setTranslation(t: list[float]) -> None: ...
-
-
 def stepBackward100() -> None: ...
-
-
 def sourceImageStructure(
     n: str, m: str | None = None
 ) -> tuple[int, int, int, int, bool, int]: ...
-
-
 def sourceMetaInfoAtFrame(
     atframe: int, root: str | None = None
 ) -> Any: ...  # "MetaEvalInfo": ...
-
-
 def inputNodeUserNameAtFrame(frame: int, node: str | None = None) -> str: ...
-
-
 def displayFeedback2(text: str, duration: float) -> None: ...
-
-
 def setUIName(node: str, val: str) -> None: ...
-
-
 def removeFromProp(name: str, value: str) -> None: ...
-
-
 def nodesInEvalPath(
     frame: int, typeName: str = "", nodeName: str | None = None
 ) -> list[str]: ...
-
-
 def reloadInOut() -> None: ...
-
-
 def stepBackward10() -> None: ...
-
-
 @overload
 def popInputToTop(node: str, input: str) -> None: ...
-
-
 @overload
 def popInputToTop(node: str, index: int) -> None: ...
-
-
 def popInputToTop(node: str, *args, **kwargs) -> None: ...
