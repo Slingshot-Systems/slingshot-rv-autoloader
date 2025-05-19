@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version number"
-        required: true
+        description: "Release version number (leave blank for automatic minor version bump)"
+        required: false
   # pull_request: # only used for testing the action
 
 permissions:
@@ -37,14 +37,24 @@ jobs:
 
       - run: uv run poe test # run tests. why not?
 
-      - name: Update Poetry version
+      - name: Set version
+        id: set_version
         run: |
-          uv version ${{ github.event.inputs.version }}
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            uv version ${{ github.event.inputs.version }}
+          else
+            # Bump minor version
+            uv version --bump minor
+            # Get new version after bump
+            NEW_VERSION=$(uv version --short)
+            echo "VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
+          fi
 
       - name: Version up PACKAGE file
         run: |
-          sed -i "s/version: .*/version: ${{ github.event.inputs.version }}/" src/PACKAGE
-          sed -i "s/version: .*/version: ${{ github.event.inputs.version }}/" slingshot_rv_autoloader.cfg.EXAMPLE
+          sed -i "s/version: .*/version: ${{ steps.set_version.outputs.VERSION }}/" src/PACKAGE
+          sed -i "s/version: .*/version: ${{ steps.set_version.outputs.VERSION }}/" slingshot_rv_autoloader.cfg.EXAMPLE
 
       - name: Check if there are any changes
         id: verify_diff
@@ -53,12 +63,14 @@ jobs:
 
       - name: Commit updated files
         if: steps.verify_diff.outputs.changed == 'true'
+        shell: bash
         run: |
+          set -euo pipefail
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
           git add src/PACKAGE pyproject.toml slingshot_rv_autoloader.cfg.EXAMPLE
-          git commit -m "Bump version to ${{ github.event.inputs.version }}"
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          git commit -m "Bump version to ${{ steps.set_version.outputs.VERSION }}"
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             git push origin HEAD:${{ github.head_ref }}
           else
             git push
@@ -71,5 +83,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: build/*.rvpkg
-          tag_name: v${{ github.event.inputs.version }}
+          tag_name: v${{ steps.set_version.outputs.VERSION }}
           generate_release_notes: true
