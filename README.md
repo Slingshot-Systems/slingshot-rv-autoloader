@@ -26,4 +26,9 @@ poetry run pytest ./tests/
 
 ---
 
-This package is based off code by Autodesk, Inc., licensed under `Apache-2.0`.
+## License
+
+Copyright 2025 Slingshot Systems Inc.
+Licensed under `Apache-2.0`. See the `LICENSE` file for more information.
+
+OpenRV is Copyright Autodesk, Inc., licensed under `Apache-2.0`.
