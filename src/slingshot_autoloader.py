@@ -78,7 +78,11 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
         logger.setLevel(logging.DEBUG if self._settings.debug else logging.INFO)
 
         if self._settings.load_luts_enabled:
-            OCIO.SetCurrentConfig(get_ocio_config(self.config))
+            try:
+                OCIO.SetCurrentConfig(get_ocio_config(self.config))
+            except Exception as e:
+                logger.error(f"Failed to load OCIO config: {e}")
+                self._settings.load_luts_enabled = False
 
         init_bindings = [
             (
