@@ -80,6 +80,15 @@ inactive_colorspaces: [CIE XYZ-D65 - Display-referred, CIE XYZ-D65 - Scene-refer
 
 looks:
   - !<Look>
+    name: slingshot_lut
+    process_space: scene_linear
+    transform: !<FileTransform> {src: "${LUT_PATH}", interpolation: linear}
+  - !<Look>
+    name: slingshot_cdl
+    process_space: scene_linear
+    transform: !<FileTransform> {src: "${CDL_PATH}", cccid: 0}
+
+  - !<Look>
     name: ACES 1.3 Reference Gamut Compression
     process_space: ACES2065-1
     description: |

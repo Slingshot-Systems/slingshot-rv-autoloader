@@ -7,6 +7,7 @@ import shutil
 from configparser import ConfigParser
 from dataclasses import asdict, dataclass, field, is_dataclass
 from pathlib import Path
+from typing import Literal
 
 import PyOpenColorIO as OCIO
 
@@ -33,7 +34,7 @@ class AutoloadPlatesConfig:
 
 @dataclass
 class AutoloadColorConfig:
-    mov_colorspace: str = "Rec709"
+    mov_colorspace: Literal["sRGB", "Rec709", "Linear"] = "Rec709"
     exr_colorspace: str = "ACES2065-1"
     working_space: str = "ACEScc"
     look_cdl: str | None = None
@@ -98,8 +99,12 @@ def _convert_configparser_to_config(config: ConfigParser) -> AutoloaderConfig:
         if config.has_section("other")
         else {},
         color=AutoloadColorConfig(
-            mov_colorspace=config["color"].get("mov_colorspace")
-            or AutoloadColorConfig.__dataclass_fields__["mov_colorspace"].default,
+            mov_colorspace=(
+                value
+                if (value := config["color"].get("mov_colorspace"))
+                in ("sRGB", "Rec709", "Linear")
+                else AutoloadColorConfig.__dataclass_fields__["mov_colorspace"].default
+            ),
             exr_colorspace=config["color"].get("exr_colorspace")
             or AutoloadColorConfig.__dataclass_fields__["exr_colorspace"].default,
             working_space=config["color"].get("working_space")
