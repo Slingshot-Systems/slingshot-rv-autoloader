@@ -71,3 +71,8 @@ working_space = ARRI LogC4
 ; - A path relative to the source media to a LUT, with wildcard support (e.g. ../*.cube)
 ; Note: A Rec709ToLinear node will automatically be added after this LUT
 ;look_lut = ../../../plate/*/*.cube
+
+; The LUT output space that we expect the EXRs to be in once the LUT is applied.
+; This is used to bring the final result back to scene linear.
+; It's usually scene_linear (ACEScc) but in some cases it might be Rec709 (g24_rec709)
+;look_lut_out_colorspace = ACEScc

@@ -39,6 +39,7 @@ class AutoloadColorConfig:
     working_space: str = "ACEScc"
     look_cdl: str | None = None
     look_lut: str | None = None
+    look_lut_out_colorspace: str = "g24_rec709"
 
 
 @dataclass(frozen=True)
@@ -111,6 +112,10 @@ def _convert_configparser_to_config(config: ConfigParser) -> AutoloaderConfig:
             or AutoloadColorConfig.__dataclass_fields__["working_space"].default,
             look_cdl=config["color"].get("look_cdl"),
             look_lut=config["color"].get("look_lut"),
+            look_lut_out_colorspace=config["color"].get("look_lut_out_colorspace")
+            or AutoloadColorConfig.__dataclass_fields__[
+                "look_lut_out_colorspace"
+            ].default,
         )
         if config.has_section("color")
         else AutoloadColorConfig(),
@@ -173,7 +178,7 @@ def get_ocio_config(autoloader_config: AutoloaderConfig) -> OCIO.Config:
     config = config_module.CreateFromFile(str(ocio_config_path))
 
     # validate configuration
-    for _field in ["working_space", "exr_colorspace"]:
+    for _field in ["working_space", "exr_colorspace", "look_lut_out_colorspace"]:
         colorspace = getattr(autoloader_config.color, _field)
         if not (validated_colorspace := config.parseColorSpaceFromString(colorspace)):
             raise Exception(

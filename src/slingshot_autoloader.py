@@ -173,6 +173,10 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
                                 label=f"    Look LUT: {self.config.color.look_lut}",
                                 stateHook=lambda: commands.DisabledMenuState,
                             ).tuple(),
+                            MenuItem(
+                                label=f"    Look LUT Output Colorspace: {self.config.color.look_lut_out_colorspace}",
+                                stateHook=lambda: commands.DisabledMenuState,
+                            ).tuple(),
                             MenuItem("_").tuple(),
                             MenuItem(
                                 label="Load config from file...",

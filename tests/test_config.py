@@ -43,6 +43,7 @@ from slingshot_autoloader_config import (
                     "working_space": "ACEScc",
                     "look_cdl": "/path/to/look_cdl",
                     "look_lut": "/path/to/look_lut",
+                    "look_lut_out_colorspace": "g24_rec709",
                 },
             },
             AutoloaderConfig(
@@ -64,6 +65,7 @@ from slingshot_autoloader_config import (
                     working_space="ACEScc",
                     look_cdl="/path/to/look_cdl",
                     look_lut="/path/to/look_lut",
+                    look_lut_out_colorspace="g24_rec709",
                 ),
             ),
             id="happy_path_all_keys_present",
@@ -86,6 +88,7 @@ from slingshot_autoloader_config import (
                 "color": {
                     "look_cdl": None,
                     "look_lut": None,
+                    "look_lut_out_colorspace": None,
                 },
             },
             AutoloaderConfig(
@@ -128,6 +131,7 @@ from slingshot_autoloader_config import (
                     "working_space": "colorspace-2",
                     "look_cdl": "/path/to/look_cdl",
                     "look_lut": "/path/to/look_lut",
+                    "look_lut_out_colorspace": "g24_rec709",
                 },
             },
             AutoloaderConfig(
@@ -137,6 +141,7 @@ from slingshot_autoloader_config import (
                     working_space="colorspace-2",
                     look_cdl="/path/to/look_cdl",
                     look_lut="/path/to/look_lut",
+                    look_lut_out_colorspace="g24_rec709",
                 )
             ),
             id="color_only",
@@ -166,6 +171,7 @@ from slingshot_autoloader_config import (
                     working_space="ACEScc",
                     look_cdl=None,
                     look_lut=None,
+                    # expect default look_lut_out_colorspace
                 ),
             ),
             id="edge_case_missing_some_keys",
@@ -259,27 +265,33 @@ OCIO_CONFIG_PATH = (
 
 
 @pytest.mark.parametrize(
-    "working_space, exr_colorspace, expected_working_space, expected_exr_colorspace",
+    "working_space, exr_colorspace, look_lut_out_colorspace, expected_working_space, expected_exr_colorspace, expected_lut_out",
     [
         pytest.param(
             "lin_srgb",
             "lin_ap1",
+            "g24_rec709",
             "Linear Rec.709 (sRGB)",
             "ACEScg",
+            "Gamma 2.4 Encoded Rec.709",
             id="happy_path_lin_srgb",
         ),
         pytest.param(
             "ACES - ACES2065-1",
             "ACEScc",
+            "Gamma 2.4 Encoded Rec.709",
             "ACES2065-1",
             "ACEScc",
+            "Gamma 2.4 Encoded Rec.709",
             id="happy_path_aces",
         ),
         pytest.param(
             '"ARRI LogC4"',
             '"Linear ARRI Wide Gamut 4"',
+            '"g24_rec709"',
             "ARRI LogC4",
             "Linear ARRI Wide Gamut 4",
+            "Gamma 2.4 Encoded Rec.709",
             id="happy_path_extra_quotes",
         ),
     ],
@@ -288,12 +300,16 @@ OCIO_CONFIG_PATH = (
 def test_get_ocio_config_happy_path(
     working_space: str,
     exr_colorspace: str,
+    look_lut_out_colorspace: str,
     expected_working_space: str,
     expected_exr_colorspace: str,
+    expected_lut_out: str,
 ):
     autoloader_config = AutoloaderConfig(
         color=AutoloadColorConfig(
-            working_space=working_space, exr_colorspace=exr_colorspace
+            working_space=working_space,
+            exr_colorspace=exr_colorspace,
+            look_lut_out_colorspace=look_lut_out_colorspace,
         )
     )
 
@@ -304,23 +320,40 @@ def test_get_ocio_config_happy_path(
     # Assert
     assert autoloader_config.color.working_space == expected_working_space
     assert autoloader_config.color.exr_colorspace == expected_exr_colorspace
+    assert autoloader_config.color.look_lut_out_colorspace == expected_lut_out
 
 
 @pytest.mark.usefixtures("monkeypatch_ocio_config_path")
 @pytest.mark.parametrize(
-    "working_space, exr_colorspace, expected_exception",
+    "working_space, exr_colorspace, look_lut_out_colorspace, expected_exception",
     [
         pytest.param(
-            "invalid_working_space", "lin_srgb", Exception, id="invalid_working_space"
+            "invalid_working_space",
+            "lin_srgb",
+            "g24_rec709",
+            Exception,
+            id="invalid_working_space",
         ),
         pytest.param(
-            "lin_srgb", "invalid_exr_colorspace", Exception, id="invalid_exr_colorspace"
+            "lin_srgb",
+            "invalid_exr_colorspace",
+            "g24_rec709",
+            Exception,
+            id="invalid_exr_colorspace",
         ),
         pytest.param(
             "invalid_working_space",
             "invalid_exr_colorspace",
+            "g24_rec709",
             Exception,
             id="invalid_both",
+        ),
+        pytest.param(
+            "lin_srgb",
+            "lin_ap1",
+            "invalid_lut_out",
+            Exception,
+            id="invalid_lut_out",
         ),
     ],
 )
@@ -328,11 +361,14 @@ def test_get_ocio_config_happy_path(
 def test_get_ocio_config_invalid_colorspace(
     working_space: str,
     exr_colorspace: str,
+    look_lut_out_colorspace: str,
     expected_exception: type[Exception],
 ):
     autoloader_config = AutoloaderConfig(
         color=AutoloadColorConfig(
-            working_space=working_space, exr_colorspace=exr_colorspace
+            working_space=working_space,
+            exr_colorspace=exr_colorspace,
+            look_lut_out_colorspace=look_lut_out_colorspace,
         )
     )
 
