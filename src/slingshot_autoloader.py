@@ -604,6 +604,15 @@ def createMode():
 def applyOCIOProps(
     node: str, properties: "OCIOProperties", context: dict | None = None
 ):
+    # set context first to avoid "ERROR: OCIOIPNode: The specified file reference '${LUT_PATH}' could not be located."
+    if context:
+        for key, value in context.items():
+            if not commands.propertyExists(f"{node}.ocio_context.{key}"):
+                commands.newProperty(
+                    f"{node}.ocio_context.{key}", commands.StringType, 1
+                )
+            commands.setStringProperty(f"{node}.ocio_context.{key}", [value], True)
+
     for prop, value in properties.items():
         if isinstance(value, str):
             commands.setStringProperty(f"{node}.{prop}", [value], True)
@@ -615,11 +624,3 @@ def applyOCIOProps(
             raise ValueError(
                 f"Cannot set property {prop} with value of type {type(value)}"
             )
-
-    if context:
-        for key, value in context.items():
-            if not commands.propertyExists(f"{node}.ocio_context.{key}"):
-                commands.newProperty(
-                    f"{node}.ocio_context.{key}", commands.StringType, 1
-                )
-            commands.setStringProperty(f"{node}.ocio_context.{key}", [value], True)
