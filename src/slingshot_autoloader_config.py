@@ -43,10 +43,10 @@ class AutoloadColorConfig:
 
 @dataclass(frozen=True)
 class AutoloaderConfig:
-    main: AutoloadMainConfig = AutoloadMainConfig()
-    plates: AutoloadPlatesConfig = AutoloadPlatesConfig()
+    main: AutoloadMainConfig = field(default_factory=AutoloadMainConfig)
+    plates: AutoloadPlatesConfig = field(default_factory=AutoloadPlatesConfig)
     other: dict[str, str] = field(default_factory=dict)
-    color: AutoloadColorConfig = AutoloadColorConfig()
+    color: AutoloadColorConfig = field(default_factory=AutoloadColorConfig)
 
 
 def _create_default_config(path: Path) -> ConfigParser:
