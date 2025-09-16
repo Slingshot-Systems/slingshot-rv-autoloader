@@ -173,6 +173,10 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
                                 label=f"    Look LUT: {self.config.color.look_lut}",
                                 stateHook=lambda: commands.DisabledMenuState,
                             ).tuple(),
+                            MenuItem(
+                                label=f"    Look LUT Output Colorspace: {self.config.color.look_lut_out_colorspace}",
+                                stateHook=lambda: commands.DisabledMenuState,
+                            ).tuple(),
                             MenuItem("_").tuple(),
                             MenuItem(
                                 label="Load config from file...",
@@ -436,35 +440,49 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
             source_group, "RVLookPipelineGroup"
         )[0]
 
-        look_pipeline = []
-
         # this is not the right way to do this, ideally all these transforms would be defined in one look in the ocio.config
         # However, that means we would have to hardcode the colorspaces (trying to pass them in via context doesn't seem to work)
         # So to keep them configurable, we're going to do it with a bunch of look nodes
+
+        look_pipeline = [
+            "OCIOLook",  # scene_linear to working space (log)
+            "OCIOLook",  # working space to linear (log)
+        ]
+
         if self.config.color.look_cdl:
-            look_pipeline += [
-                "OCIOLook",  # scene_linear to camera space (log)
-                "OCIOLook",  # CDL
-                "OCIOLook",  # camera space (log) back to scene_linear
-            ]
+            look_pipeline.append("OCIOLook")  # CDL
 
         if self.config.color.look_lut:
-            look_pipeline = [
-                "OCIOLook",  # scene_linear to camera space (log)
-                "OCIOLook",  # LUT
-            ]
-
-            # convert output space back to scene_linear if necessary
-            # it would be better to handle this in OCIO as well, but since we're not using for OCIO for .movs yet it's easier to use RV's built in node.
-            if self.config.color.mov_colorspace == "sRGB":
-                look_pipeline.append("sRGBToLinear")
-            elif self.config.color.mov_colorspace == "Rec709":
-                look_pipeline.append("Rec709ToLinear")
+            look_pipeline.append("OCIOLook")  # LUT
 
         commands.setStringProperty(f"{look_pipe}.pipeline.nodes", look_pipeline, True)
+        look_nodes = extra_commands.nodesInGroupOfType(look_pipe, "OCIOLook")
 
-        self._add_look_cdl(source_path, look_pipe)
-        self._add_look_lut(source_path, look_pipe)
+        applyOCIOProps(
+            look_nodes[0],  # lin to working space
+            {
+                "ocio.function": "color",
+                "ocio.inColorSpace": "scene_linear",
+                "ocio_color.outColorSpace": self.config.color.working_space,
+            },
+        )
+
+        applyOCIOProps(
+            look_nodes[-1],  # lut output space to linear
+            {
+                "ocio.function": "color",
+                "ocio.inColorSpace": self.config.color.look_lut_out_colorspace
+                if self.config.color.look_lut
+                else self.config.color.working_space,
+                "ocio_color.outColorSpace": "scene_linear",
+            },
+        )
+
+        if self.config.color.look_cdl:
+            self._add_look_cdl(source_path, look_nodes[1])
+
+        if self.config.color.look_lut:
+            self._add_look_lut(source_path, look_nodes[-2])
 
         # print a debug summary
         _look_pipe_nodes = commands.nodesInGroup(look_pipe)
@@ -479,7 +497,7 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
                     f"    look: {commands.getStringProperty(f'{node}.ocio_look.look', 0, 1)[0]}"
                 )
 
-    def _add_look_cdl(self, source_path: Path, look_pipe: str):
+    def _add_look_cdl(self, source_path: Path, node: str):
         if not self.config.color.look_cdl:
             return
 
@@ -487,19 +505,10 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
             logger.warning("Can't load look CDL")
             return
 
-        cdl_nodes = extra_commands.nodesInGroupOfType(look_pipe, "OCIOLook")
         logger.info(f"Loading look CDL {cdl_path}")
         # commands.readCDL(str(cdl_path), color_node, True)
         applyOCIOProps(
-            cdl_nodes[0],  # lin to log
-            {
-                "ocio.function": "color",
-                "ocio.inColorSpace": "scene_linear",
-                "ocio_color.outColorSpace": self.config.color.working_space,
-            },
-        )
-        applyOCIOProps(
-            cdl_nodes[1],
+            node,
             {
                 "ocio.function": "look",
                 "ocio_look.look": "slingshot_cdl",
@@ -507,16 +516,8 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
             },
             context={"CDL_PATH": str(cdl_path)},
         )
-        applyOCIOProps(
-            cdl_nodes[2],  # log to lin
-            {
-                "ocio.function": "color",
-                "ocio.inColorSpace": self.config.color.working_space,
-                "ocio_color.outColorSpace": "scene_linear",
-            },
-        )
 
-    def _add_look_lut(self, source_path: Path, look_pipe: str):
+    def _add_look_lut(self, source_path: Path, node: str):
         if not self.config.color.look_lut:
             return
 
@@ -524,20 +525,11 @@ class SlingshotAutoLoaderMode(rvtypes.MinorMode):
             logger.warning("Can't load look LUT")
             return
 
-        look_nodes = extra_commands.nodesInGroupOfType(look_pipe, "OCIOLook")
-
         logger.info(f"Loading look LUT: {lut_path}")
         # commands.readLUT(str(lut_path), look_node, True)
+
         applyOCIOProps(
-            look_nodes[-2],  # lin to log
-            {
-                "ocio.function": "color",
-                "ocio.inColorSpace": "scene_linear",
-                "ocio_color.outColorSpace": self.config.color.working_space,
-            },
-        )
-        applyOCIOProps(
-            look_nodes[-1],
+            node,
             {
                 "ocio.function": "look",
                 "ocio_look.look": "slingshot_lut",
