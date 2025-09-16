@@ -5,7 +5,7 @@ description = "Slingshot RV Plate/v000/LUT/CDL Auto Loader"
 authors = [
     { name = "slingshotsys", email = "146885925+slingshotsys@users.noreply.github.com" },
 ]
-requires-python = ">=3.10,<3.11"
+requires-python = ">=3.10,<=3.11"
 readme = "README.md"
 license = "Apache-2.0"
 dependencies = ["opencolorio>=2.4.1,<3"]
